@@ -2271,6 +2271,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function normalizePropertyDetailDisplayText(value) {
         return String(value || '')
+            .replace(/\s*(?:Â·|â€¢)\s*/g, ' • ')
             .replace(/ft-�/gi, 'sqft')
             .replace(/�/g, '')
             .replace(/\s{2,}/g, ' ')
@@ -5277,6 +5278,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
     function normalizePropertyDetailDisplayText(value) {
         return String(value || '')
+            .replace(/\s*(?:Â·|â€¢)\s*/g, ' • ')
             .replace(/ft-�/gi, 'sqft')
             .replace(/�/g, '')
             .replace(/\s{2,}/g, ' ')
@@ -7635,6 +7637,10 @@ function initNavbarDateTime() {
                 markup: '<a href="campaigns.html" class="nav-link"><span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>Twilio Messaging</a>'
             },
             {
+                href: 'mls-imports-spreadsheet.html',
+                markup: '<a href="mls-imports-spreadsheet.html" class="nav-link"><span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>MLS Spreadsheet</a>'
+            },
+            {
                 href: 'deals.html',
                 markup: '<a href="deals.html" class="nav-link"><span class="nav-icon nav-icon-deals" aria-hidden="true"></span>My Deals</a>'
             },
@@ -7699,6 +7705,7 @@ function initNavbarDateTime() {
         };
         const workspaceGroupHrefs = [
             'campaigns.html',
+            'mls-imports-spreadsheet.html',
             'my-agents.html',
             'deals.html',
             'gmail.html',
@@ -7970,7 +7977,7 @@ function initNavbarDateTime() {
         candidateMenuItems.forEach((item) => {
             const link = item.querySelector(':scope > .nav-link[href]');
             const href = normalizeHrefValue(link && link.getAttribute('href'));
-            if (!href || canonicalHrefs.has(href) || href === 'fbg-messages.html' || href === 'mls-imports-spreadsheet.html') {
+            if (!href || canonicalHrefs.has(href) || href === 'fbg-messages.html') {
                 return;
             }
             fragment.appendChild(item);
@@ -14417,12 +14424,12 @@ function initNavbarDateTime() {
             nextItem.snapshot = incomingItem.snapshot && typeof incomingItem.snapshot === 'object'
                 ? incomingItem.snapshot
                 : nextItem.snapshot;
-            nextItem.propertyAddress = String(incomingItem.propertyAddress || nextItem.propertyAddress || 'Property').trim() || 'Property';
+            nextItem.propertyAddress = normalizePropertyDetailDisplayText(incomingItem.propertyAddress || nextItem.propertyAddress || 'Property') || 'Property';
             nextItem.statusValue = normalizeAgentStatusValue(incomingItem.statusValue || nextItem.statusValue || 'none');
             nextItem.statusLabel = formatAgentStatusLabel(nextItem.statusValue);
             nextItem.assignmentRecord = incomingItem.assignmentRecord || nextItem.assignmentRecord || null;
             nextItem.assignmentSummary = incomingItem.assignmentSummary || nextItem.assignmentSummary || '';
-            nextItem.locationLabel = String(incomingItem.locationLabel || nextItem.locationLabel || '-').trim() || '-';
+            nextItem.locationLabel = normalizePropertyDetailDisplayText(incomingItem.locationLabel || nextItem.locationLabel || '-') || '-';
             nextItem.imageUrl = String(incomingItem.imageUrl || nextItem.imageUrl || '').trim();
             nextItem.sources = {
                 clicked: Boolean(nextItem.sources && nextItem.sources.clicked),
@@ -22437,6 +22444,7 @@ function initNavbarDateTime() {
 
         function normalizePropertyDetailDisplayText(value) {
             return String(value || '')
+                .replace(/\s*(?:Â·|â€¢)\s*/g, ' • ')
                 .replace(/ft-�/gi, 'sqft')
                 .replace(/�/g, '')
                 .replace(/\s{2,}/g, ' ')
@@ -22618,7 +22626,7 @@ function initNavbarDateTime() {
             const rawSnapshot = rawItem.propertySnapshot && typeof rawItem.propertySnapshot === 'object'
                 ? { ...rawItem.propertySnapshot }
                 : {};
-            const propertyAddress = String(rawItem.propertyAddress || rawSnapshot.address || rawItem.address || 'Property').trim() || 'Property';
+            const propertyAddress = normalizePropertyDetailDisplayText(rawItem.propertyAddress || rawSnapshot.address || rawItem.address || 'Property') || 'Property';
             const propertyKey = makePropertyStorageKey(rawItem.propertyKey || propertyAddress);
             const assignmentMeta = propertyKey ? getPropertyAssignmentRecord(propertyKey) : null;
             const assignmentSnapshot = assignmentMeta && assignmentMeta.propertySnapshot && typeof assignmentMeta.propertySnapshot === 'object'
@@ -22627,7 +22635,7 @@ function initNavbarDateTime() {
             const snapshot = {
                 ...(assignmentSnapshot && typeof assignmentSnapshot === 'object' ? assignmentSnapshot : {}),
                 ...rawSnapshot,
-                address: String(rawSnapshot.address || assignmentSnapshot?.address || propertyAddress).trim() || propertyAddress
+                address: normalizePropertyDetailDisplayText(rawSnapshot.address || assignmentSnapshot?.address || propertyAddress) || propertyAddress
             };
             const fallbackImageUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=900&q=80';
             const imageUrl = String(rawItem.imageUrl || snapshot.propertyImages?.[0] || '').trim() || fallbackImageUrl;
@@ -22642,7 +22650,7 @@ function initNavbarDateTime() {
                 snapshot,
                 propertyAddress,
                 imageUrl,
-                locationLabel: String(rawItem.location || snapshot.areaLabel || snapshot.location || snapshot.marketInfo || '-').trim() || '-',
+                locationLabel: normalizePropertyDetailDisplayText(rawItem.location || snapshot.areaLabel || snapshot.location || snapshot.marketInfo || '-') || '-',
                 statusLabel: formatDealsListingStatus(snapshot.statusLabel || rawStatusValue),
                 statusClassName: `is-${String(rawStatusValue || 'active').toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'active'}`,
                 assignmentMeta,
@@ -24079,6 +24087,7 @@ function initNavbarDateTime() {
 
         function normalizePropertyDetailText(value) {
             return String(value || '')
+                .replace(/\s*(?:Â·|â€¢)\s*/g, ' • ')
                 .replace(/ft-�/gi, 'sqft')
                 .replace(/�/g, '')
                 .replace(/\s{2,}/g, ' ')
@@ -24169,6 +24178,7 @@ function initNavbarDateTime() {
             }
             : defaultDetailData;
 
+        detailData.address = normalizePropertyDetailText(detailData.address || defaultDetailData.address);
         detailData.propertyDetails = normalizePropertyDetailText(detailData.propertyDetails || defaultDetailData.propertyDetails);
         detailData.marketInfo = normalizePropertyDetailText(detailData.marketInfo || defaultDetailData.marketInfo);
         detailData.lotSize = normalizePropertyDetailText(detailData.lotSize || defaultDetailData.lotSize);

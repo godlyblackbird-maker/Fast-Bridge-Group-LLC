@@ -877,26 +877,6 @@ https://templatemo.com/tm-607-glass-admin
     <script src="templatemo-glass-admin-script.js?v=20260517b"></script>
     <script>
         window.addEventListener('load', () => {
-            const removeLegacySpreadsheetLink = () => {
-                document.querySelectorAll('.sidebar .nav-link[href="mls-imports-spreadsheet.html"]').forEach((link) => {
-                    const navItem = link.closest('.nav-item');
-                    if (navItem) {
-                        navItem.remove();
-                    }
-                });
-            };
-
-            const sidebarNav = document.querySelector('.sidebar .nav-menu');
-            removeLegacySpreadsheetLink();
-            if (typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(removeLegacySpreadsheetLink);
-            }
-            if (sidebarNav && typeof MutationObserver === 'function') {
-                const legacyLinkObserver = new MutationObserver(() => {
-                    removeLegacySpreadsheetLink();
-                });
-                legacyLinkObserver.observe(sidebarNav, { childList: true, subtree: true });
-            }
         });
     </script>
     <script src="auth.js"></script>

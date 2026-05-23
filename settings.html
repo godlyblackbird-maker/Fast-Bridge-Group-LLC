@@ -23,26 +23,6 @@
                     try {
                         return JSON.parse(localStorage.getItem(key) || '{}');
                     } catch (error) {
-                        return {};
-                    }
-                };
-
-                const profile = readJson('userProfile');
-                const user = readJson('user');
-                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-                const userEmail = String(user.email || '').trim().toLowerCase();
-                const profileEmail = String(profile.email || '').trim().toLowerCase();
-                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
-                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
-                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
-                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
-                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
-                const sidebarState = sidebarStateStore[userKey];
-                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
-
-                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
-
-                const themeStore = readJson('dashboardThemeByUser');
                 const normalizedNameKey = name.toLowerCase().replace(/\s+/g, '-');
                 const candidateThemeKeys = Array.from(new Set([userKey, email, normalizedNameKey, 'default-user'].filter(Boolean)));
                 let theme = String(candidateThemeKeys
@@ -1797,26 +1777,6 @@ https://templatemo.com/tm-607-glass-admin
         })();
 
         window.addEventListener('load', () => {
-            const removeLegacySpreadsheetLink = () => {
-                document.querySelectorAll('.sidebar .nav-link[href="mls-imports-spreadsheet.html"]').forEach((link) => {
-                    const navItem = link.closest('.nav-item');
-                    if (navItem) {
-                        navItem.remove();
-                    }
-                });
-            };
-
-            const sidebarNav = document.querySelector('.sidebar .nav-menu');
-            removeLegacySpreadsheetLink();
-            if (typeof window.requestAnimationFrame === 'function') {
-                window.requestAnimationFrame(removeLegacySpreadsheetLink);
-            }
-            if (sidebarNav && typeof MutationObserver === 'function') {
-                const legacyLinkObserver = new MutationObserver(() => {
-                    removeLegacySpreadsheetLink();
-                });
-                legacyLinkObserver.observe(sidebarNav, { childList: true, subtree: true });
-            }
         });
     </script>
     <script src="auth.js"></script>
