@@ -198,9 +198,49 @@
             box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb, 5, 150, 105), 0.4);
         }
 
-        .employee-sheet-status-cell.is-active {
-            color: #a7f3d0;
-            font-weight: 600;
+        .employee-sheet-status-cell {
+            min-width: 180px;
+        }
+
+        .employee-sheet-status-select {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.9);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            font: inherit;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            outline: none;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+        }
+
+        .employee-sheet-status-select:focus {
+            border-color: rgba(var(--accent-rgb, 5, 150, 105), 0.45);
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb, 5, 150, 105), 0.15);
+        }
+
+        .employee-sheet-status-select.is-active {
+            color: #052e1b;
+            background: rgba(134, 239, 172, 0.9);
+        }
+
+        .employee-sheet-status-select.is-pending,
+        .employee-sheet-status-select.is-onboarding {
+            color: #422006;
+            background: rgba(253, 224, 71, 0.9);
+        }
+
+        .employee-sheet-status-select.is-training {
+            color: #431407;
+            background: rgba(251, 146, 60, 0.92);
+        }
+
+        .employee-sheet-status-select.is-terminated {
+            color: #fff1f2;
+            background: rgba(220, 38, 38, 0.92);
         }
 
         .employee-sheet-note {
@@ -374,6 +414,14 @@
                 'Notes'
             ];
 
+            const EMPLOYMENT_STATUS_OPTIONS = [
+                'ACTIVE',
+                'PENDING',
+                'ONBOARDING',
+                'TRAINING',
+                'TERMINATED'
+            ];
+
             function safeReadJson(key) {
                 try {
                     return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || '{}');
@@ -487,13 +535,58 @@
                 lastEdited.textContent = `Last update: ${editorLabel} on ${formatEditedAt(sheet.updatedAt)}`;
             }
 
-            function applyStatusCellStyle(cell) {
-                if (!cell) {
+            function normalizeEmploymentStatus(value) {
+                const normalized = String(value || '').trim().toUpperCase();
+                if (normalized === 'TERMINTATED') {
+                    return 'TERMINATED';
+                }
+                return EMPLOYMENT_STATUS_OPTIONS.includes(normalized) ? normalized : 'ACTIVE';
+            }
+
+            function applyStatusSelectStyle(select) {
+                if (!select) {
                     return;
                 }
-                const value = String(cell.textContent || '').trim();
-                cell.classList.toggle('employee-sheet-status-cell', true);
-                cell.classList.toggle('is-active', /^(active|full time|part time|contractor)$/i.test(value));
+
+                const statusValue = normalizeEmploymentStatus(select.value);
+                select.value = statusValue;
+                select.classList.remove('is-active', 'is-pending', 'is-onboarding', 'is-training', 'is-terminated');
+
+                if (statusValue === 'ACTIVE') {
+                    select.classList.add('is-active');
+                } else if (statusValue === 'PENDING') {
+                    select.classList.add('is-pending');
+                } else if (statusValue === 'ONBOARDING') {
+                    select.classList.add('is-onboarding');
+                } else if (statusValue === 'TRAINING') {
+                    select.classList.add('is-training');
+                } else if (statusValue === 'TERMINATED') {
+                    select.classList.add('is-terminated');
+                }
+            }
+
+            function createStatusCell(value) {
+                const td = document.createElement('td');
+                td.className = 'employee-sheet-status-cell';
+
+                const select = document.createElement('select');
+                select.className = 'employee-sheet-status-select';
+                EMPLOYMENT_STATUS_OPTIONS.forEach((status) => {
+                    const option = document.createElement('option');
+                    option.value = status;
+                    option.textContent = status;
+                    select.appendChild(option);
+                });
+
+                select.value = normalizeEmploymentStatus(value);
+                applyStatusSelectStyle(select);
+                select.addEventListener('change', () => {
+                    applyStatusSelectStyle(select);
+                    scheduleSaveRows();
+                });
+
+                td.appendChild(select);
+                return td;
             }
 
             function createEditableCell(value, className) {
@@ -505,21 +598,15 @@
                     td.className = className;
                 }
                 td.addEventListener('input', () => {
-                    if (className === 'employee-sheet-status-cell') {
-                        applyStatusCellStyle(td);
-                    }
                     scheduleSaveRows();
                 });
-                if (className === 'employee-sheet-status-cell') {
-                    applyStatusCellStyle(td);
-                }
                 return td;
             }
 
             function createRow(data) {
                 const row = data && typeof data === 'object' ? data : {};
                 const tr = document.createElement('tr');
-                tr.appendChild(createEditableCell(row.employmentStatus || 'Active', 'employee-sheet-status-cell'));
+                tr.appendChild(createStatusCell(row.employmentStatus || 'ACTIVE'));
                 tr.appendChild(createEditableCell(row.fullName || ''));
                 tr.appendChild(createEditableCell(row.roleTitle || ''));
                 tr.appendChild(createEditableCell(row.department || ''));
@@ -534,8 +621,9 @@
 
             function readEmployeeRow(tr) {
                 const cells = tr.querySelectorAll('td');
+                const statusSelect = cells[0] ? cells[0].querySelector('select') : null;
                 return {
-                    employmentStatus: cells[0] ? cells[0].textContent.trim() : '',
+                    employmentStatus: statusSelect ? normalizeEmploymentStatus(statusSelect.value) : '',
                     fullName: cells[1] ? cells[1].textContent.trim() : '',
                     roleTitle: cells[2] ? cells[2].textContent.trim() : '',
                     department: cells[3] ? cells[3].textContent.trim() : '',
@@ -716,7 +804,7 @@
             setSyncStatus('Syncing shared admin sheet...', 'info');
 
             addRowBtn.addEventListener('click', () => {
-                const newRow = createRow({ employmentStatus: 'Active' });
+                const newRow = createRow({ employmentStatus: 'ACTIVE' });
                 body.appendChild(newRow);
                 scheduleSaveRows();
                 const editableCells = newRow.querySelectorAll('td');
