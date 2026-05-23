@@ -14457,6 +14457,54 @@ function initNavbarDateTime() {
             return nextItem;
         }
 
+        function resolveDealWorkspaceState(item, workspaceUserRecord) {
+            const rawItem = item && typeof item === 'object' ? item : {};
+            const resolvedState = resolveDealsListItemState(rawItem);
+            const propertyKey = makePropertyStorageKey(
+                rawItem.propertyKey
+                || resolvedState.propertyAddress
+                || resolvedState.snapshot?.address
+            );
+
+            if (!propertyKey) {
+                return null;
+            }
+
+            const scopedWorkspaceUser = workspaceUserRecord && typeof workspaceUserRecord === 'object'
+                ? workspaceUserRecord
+                : getWorkspaceUserContext();
+            const scopedStatuses = scopedWorkspaceUser && scopedWorkspaceUser.key
+                ? getUserScopedObject(PIQ_AGENT_STATUS_KEY, scopedWorkspaceUser.key)
+                : {};
+            const assignmentRecord = rawItem.assignmentRecord && typeof rawItem.assignmentRecord === 'object'
+                ? rawItem.assignmentRecord
+                : (resolvedState.assignmentMeta && typeof resolvedState.assignmentMeta === 'object'
+                    ? resolvedState.assignmentMeta
+                    : null);
+            const statusValue = normalizeAgentStatusValue(
+                rawItem.statusValue
+                || scopedStatuses[propertyKey]
+                || resolvedState.snapshot?.piqAgentStatus
+                || rawItem.propertySnapshot?.piqAgentStatus
+                || rawItem.status
+                || 'none'
+            );
+
+            return {
+                propertyKey,
+                propertyAddress: resolvedState.propertyAddress,
+                snapshot: resolvedState.snapshot,
+                statusValue,
+                statusLabel: formatAgentStatusLabel(statusValue),
+                assignmentRecord,
+                assignmentSummary: assignmentRecord
+                    ? buildAssignedByLabel(assignmentRecord)
+                    : resolvedState.assignmentSummary,
+                locationLabel: resolvedState.locationLabel,
+                imageUrl: resolvedState.imageUrl
+            };
+        }
+
         function collectItems() {
             const itemMap = new Map();
 
