@@ -226,6 +226,7 @@ const TWILIO_SCHEDULE_POLL_MS = Math.max(5 * 1000, Number.parseInt(String(proces
 const TWILIO_SCHEDULE_MIN_LEAD_MS = Math.max(60 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MIN_LEAD_MS || 60 * 1000), 10) || (60 * 1000));
 const TWILIO_SCHEDULE_MAX_BATCH = Math.max(1, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MAX_BATCH || 20), 10) || 20);
 const ACTIVE_BUYERS_SHEET_ROW_ID = 1;
+const EMPLOYEE_TRACKER_SHEET_ROW_ID = 1;
 const MLS_IMPORT_PDF_BODY_LIMIT = '260mb';
 const MLS_IMPORT_PDF_MAX_BYTES = 180 * 1024 * 1024;
 const MLS_IMPORT_PDF_PAGE_BATCH_SIZE = 40;
@@ -7490,6 +7491,25 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS employee_tracker_sheet (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      rows_json TEXT NOT NULL DEFAULT '[]',
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_by_user_id INTEGER,
+      updated_by_name TEXT,
+      updated_by_email TEXT,
+      revision INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(updated_by_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating employee_tracker_sheet table:', err);
+    } else {
+      console.log('Employee tracker sheet table ready');
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS my_agents_sheets (
       owner_user_id INTEGER PRIMARY KEY,
       rows_json TEXT NOT NULL DEFAULT '[]',
@@ -7725,6 +7745,131 @@ function normalizeActiveBuyersSheetCell(value, maxLength = 4000) {
   }
 
   return normalizedValue;
+}
+
+function normalizeEmployeeTrackerSheetCell(value, maxLength = 4000) {
+  return normalizeActiveBuyersSheetCell(value, maxLength);
+}
+
+function normalizeEmployeeTrackerSheetRow(row) {
+  const source = row && typeof row === 'object' ? row : {};
+  return {
+    employmentStatus: normalizeEmployeeTrackerSheetCell(source.employmentStatus, 120),
+    fullName: normalizeEmployeeTrackerSheetCell(source.fullName, 240),
+    roleTitle: normalizeEmployeeTrackerSheetCell(source.roleTitle, 240),
+    department: normalizeEmployeeTrackerSheetCell(source.department, 240),
+    workEmail: normalizeEmployeeTrackerSheetCell(source.workEmail, 320),
+    phone: normalizeEmployeeTrackerSheetCell(source.phone, 120),
+    startDate: normalizeEmployeeTrackerSheetCell(source.startDate, 80),
+    manager: normalizeEmployeeTrackerSheetCell(source.manager, 240),
+    location: normalizeEmployeeTrackerSheetCell(source.location, 240),
+    notes: normalizeEmployeeTrackerSheetCell(source.notes, 4000)
+  };
+}
+
+function normalizeEmployeeTrackerSheetRows(rows) {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+
+  return rows
+    .slice(0, 5000)
+    .map((row) => normalizeEmployeeTrackerSheetRow(row))
+    .filter((row) => Object.values(row).some(Boolean));
+}
+
+function parseEmployeeTrackerSheetRows(rowsJson) {
+  try {
+    return normalizeEmployeeTrackerSheetRows(JSON.parse(String(rowsJson || '[]')));
+  } catch (error) {
+    return [];
+  }
+}
+
+function serializeEmployeeTrackerSheetRow(row) {
+  const normalizedRow = normalizeEmployeeTrackerSheetRow(row);
+  return {
+    ...normalizedRow,
+    isActive: /^(active|full time|part time|contractor)$/i.test(normalizedRow.employmentStatus)
+  };
+}
+
+function serializeEmployeeTrackerSheet(sheetRow) {
+  const row = sheetRow && typeof sheetRow === 'object' ? sheetRow : {};
+  const updatedByName = String(row.updated_by_name || '').trim();
+  const updatedByEmail = String(row.updated_by_email || '').trim().toLowerCase();
+  const updatedByLabel = updatedByName || updatedByEmail || '';
+
+  return {
+    rows: parseEmployeeTrackerSheetRows(row.rows_json).map((entry) => serializeEmployeeTrackerSheetRow(entry)),
+    revision: Math.max(0, Number(row.revision) || 0),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+    updatedBy: updatedByLabel
+      ? {
+          id: Number(row.updated_by_user_id) || null,
+          name: updatedByName,
+          email: updatedByEmail,
+          label: updatedByLabel
+        }
+      : null
+  };
+}
+
+async function loadEmployeeTrackerSheet() {
+  const row = await dbGet(
+    `SELECT id, rows_json, updated_at, updated_by_user_id, updated_by_name, updated_by_email, revision
+       FROM employee_tracker_sheet
+      WHERE id = ?`,
+    [EMPLOYEE_TRACKER_SHEET_ROW_ID]
+  );
+
+  if (!row) {
+    return {
+      rows: [],
+      revision: 0,
+      updatedAt: null,
+      updatedBy: null
+    };
+  }
+
+  return serializeEmployeeTrackerSheet(row);
+}
+
+async function saveEmployeeTrackerSheet(rows, actor) {
+  const normalizedRows = normalizeEmployeeTrackerSheetRows(rows);
+  const actorUserId = Number(actor && actor.id) || null;
+  const actorName = String(actor && actor.name || '').trim();
+  const actorEmail = normalizeKnownEmail(actor && actor.email || '');
+  const updatedAt = new Date().toISOString();
+
+  await dbRun(
+    `INSERT INTO employee_tracker_sheet (
+      id,
+      rows_json,
+      updated_at,
+      updated_by_user_id,
+      updated_by_name,
+      updated_by_email,
+      revision
+    ) VALUES (?, ?, ?, ?, ?, ?, 1)
+    ON CONFLICT(id) DO UPDATE SET
+      rows_json = excluded.rows_json,
+      updated_at = excluded.updated_at,
+      updated_by_user_id = excluded.updated_by_user_id,
+      updated_by_name = excluded.updated_by_name,
+      updated_by_email = excluded.updated_by_email,
+      revision = employee_tracker_sheet.revision + 1`,
+    [
+      EMPLOYEE_TRACKER_SHEET_ROW_ID,
+      JSON.stringify(normalizedRows),
+      updatedAt,
+      actorUserId,
+      actorName,
+      actorEmail
+    ]
+  );
+
+  return loadEmployeeTrackerSheet();
 }
 
 function normalizeActiveBuyersSheetRow(row) {
@@ -21462,6 +21607,37 @@ app.put('/api/admin/active-buyers', express.json({ limit: '5mb' }), async (req, 
   } catch (error) {
     console.error('Failed to save active buyers sheet:', error);
     return res.status(500).json({ error: 'Failed to save the active buyers sheet.' });
+  }
+});
+
+app.get('/api/admin/employee-tracker', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const sheet = await loadEmployeeTrackerSheet();
+    return res.json({ sheet });
+  } catch (error) {
+    console.error('Failed to load employee tracker sheet:', error);
+    return res.status(500).json({ error: 'Failed to load the employee tracker sheet.' });
+  }
+});
+
+app.put('/api/admin/employee-tracker', express.json({ limit: '5mb' }), async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const rows = Array.isArray(req.body && req.body.rows) ? req.body.rows : [];
+    const sheet = await saveEmployeeTrackerSheet(rows, decoded);
+    return res.json({ success: true, sheet });
+  } catch (error) {
+    console.error('Failed to save employee tracker sheet:', error);
+    return res.status(500).json({ error: 'Failed to save the employee tracker sheet.' });
   }
 });
 
