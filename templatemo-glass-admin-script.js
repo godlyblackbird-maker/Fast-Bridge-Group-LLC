@@ -22149,26 +22149,34 @@ function initNavbarDateTime() {
             }
         }
 
-        async function fetchListingPreviewFromSource() {
-            if (!importSourceUrlInput) {
-                return;
-            }
-
-            const sourceUrl = String(importSourceUrlInput.value || '').trim();
-            if (!sourceUrl) {
+        async function fetchListingPreviewFromProvidedUrl(sourceUrl, options = {}) {
+            const normalizedUrl = String(sourceUrl || '').trim();
+            if (!normalizedUrl) {
                 showDashboardToast('error', 'Link Required', 'Paste a Zillow, Redfin, Realtor, or Propwire property link first.');
-                return;
+                return false;
             }
 
-            const inferredSource = inferDealsImportSourceFromUrl(sourceUrl);
+            const inferredSource = inferDealsImportSourceFromUrl(normalizedUrl);
             if (!['zillow', 'redfin', 'realtor', 'propwire'].includes(inferredSource)) {
                 showDashboardToast('error', 'Invalid Link', 'Only Zillow, Redfin, Realtor, and Propwire property links are supported in Import Property.');
-                return;
+                return false;
             }
 
-            setDealsImportSource(inferredSource);
+            const settings = options && typeof options === 'object' ? options : {};
+            const shouldManageBusyState = settings.manageBusyState !== false;
+            const successTitle = String(settings.successTitle || 'Property Autofilled').trim() || 'Property Autofilled';
+            const successMessage = String(settings.successMessage || `${getDealsImportSourceLabel(inferredSource)} listing details were added to the import form.`).trim();
+            const failureTitle = String(settings.failureTitle || 'Import Failed').trim() || 'Import Failed';
+            const defaultFailureMessage = String(settings.failureMessage || 'FAST could not pull the listing details from that link.').trim() || 'FAST could not pull the listing details from that link.';
 
-            setDealsImportLookupBusy(true, 'fetch');
+            setDealsImportSource(inferredSource);
+            if (importSourceUrlInput) {
+                importSourceUrlInput.value = normalizedUrl;
+            }
+
+            if (shouldManageBusyState) {
+                setDealsImportLookupBusy(true, 'fetch');
+            }
 
             try {
                 const response = await fetch('/api/import-listing-preview', {
@@ -22177,23 +22185,40 @@ function initNavbarDateTime() {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        url: sourceUrl,
-                        source: importSource
+                        url: normalizedUrl,
+                        source: inferredSource
                     })
                 });
 
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error(payload && payload.error ? payload.error : 'FAST could not pull the listing details from that link.');
+                    throw new Error(payload && payload.error ? payload.error : defaultFailureMessage);
                 }
 
                 populateDealsImportForm(payload.listing || {});
-                showDashboardToast('success', 'Property Autofilled', `${getDealsImportSourceLabel(inferredSource)} listing details were added to the import form.`);
+                showDashboardToast('success', successTitle, successMessage);
+                return true;
             } catch (error) {
-                showDashboardToast('error', 'Import Failed', error && error.message ? error.message : 'FAST could not pull the listing details from that link.');
+                showDashboardToast('error', failureTitle, error && error.message ? error.message : defaultFailureMessage);
+                return false;
             } finally {
-                setDealsImportLookupBusy(false);
+                if (shouldManageBusyState) {
+                    setDealsImportLookupBusy(false);
+                }
             }
+        }
+
+        async function fetchListingPreviewFromSource() {
+            if (!importSourceUrlInput) {
+                return;
+            }
+
+            await fetchListingPreviewFromProvidedUrl(importSourceUrlInput.value, {
+                manageBusyState: true,
+                successTitle: 'Property Autofilled',
+                failureTitle: 'Import Failed',
+                failureMessage: 'FAST could not pull the listing details from that link.'
+            });
         }
 
         async function autoCollectDealsImportFromAddress() {
@@ -22225,21 +22250,39 @@ function initNavbarDateTime() {
                     throw new Error(payload && payload.error ? payload.error : 'FAST could not find a matching Zillow, Redfin, or public property record for this address.');
                 }
 
-                const primarySource = String(payload.primarySource || payload.listing?.source || '').trim().toLowerCase();
                 const redfinUrl = String(
                     (payload.links && payload.links.redfin)
-                    || (primarySource === 'redfin' ? payload.primaryUrl : '')
                     || ''
                 ).trim();
+
+                if (redfinUrl) {
+                    await fetchListingPreviewFromProvidedUrl(redfinUrl, {
+                        manageBusyState: false,
+                        successTitle: 'Auto Collected',
+                        successMessage: 'FAST found the Redfin listing URL for that address, added it to the import form, and autofilled the property details.',
+                        failureTitle: 'Auto Collect Failed',
+                        failureMessage: 'FAST found the Redfin listing URL, but could not pull the listing details from it.'
+                    });
+                    return;
+                }
+
+                const primarySource = String(payload.primarySource || payload.listing?.source || '').trim().toLowerCase();
+                const primaryUrl = String(payload.primaryUrl || '').trim();
                 const listing = payload.listing && typeof payload.listing === 'object'
                     ? { ...payload.listing }
                     : {};
-                if (importSourceUrlInput && redfinUrl) {
-                    importSourceUrlInput.value = redfinUrl;
+
+                if (primaryUrl) {
+                    if (importSourceUrlInput) {
+                        importSourceUrlInput.value = primaryUrl;
+                    }
+                    if (primarySource) {
+                        setDealsImportSource(primarySource);
+                    }
                 }
 
                 populateDealsImportForm(listing);
-                showDashboardToast('success', 'Auto Collected', 'FAST found the best available Zillow, Redfin, or public property match and autofilled the import form, including the primary image URL when available.');
+                showDashboardToast('success', 'Auto Collected', 'FAST found the best available public property match for that address and autofilled the import form.');
             } catch (error) {
                 showDashboardToast('error', 'Auto Collect Failed', error && error.message ? error.message : 'FAST could not auto collect this property from the address search.');
             } finally {
