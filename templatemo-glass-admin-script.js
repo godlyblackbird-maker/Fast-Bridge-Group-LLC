@@ -14761,11 +14761,28 @@ function initNavbarDateTime() {
                 : 'No property details match these filters.';
         }
 
+        function renderLoadFailure(error) {
+            currentItems = [];
+            countBadge.textContent = '0 Rows';
+            list.innerHTML = '<p class="outreach-empty">Saved property details could not be loaded. Refresh to try again.</p>';
+            summary.textContent = 'Saved property details could not be loaded.';
+            console.error('Agent workspace filter failed to load property details:', error);
+        }
+
         async function reload() {
-            await propertyAssignmentsReady;
-            await hydrateImportedPropertyFilterItems();
-            currentItems = collectItems();
-            render();
+            refreshButton.disabled = true;
+            summary.textContent = 'Loading saved property details...';
+
+            try {
+                await propertyAssignmentsReady;
+                await hydrateImportedPropertyFilterItems();
+                currentItems = collectItems();
+                render();
+            } catch (error) {
+                renderLoadFailure(error);
+            } finally {
+                refreshButton.disabled = false;
+            }
         }
 
         hydrateStatusOptions();
