@@ -15144,6 +15144,10 @@ function initNavbarDateTime() {
             recipientNameInput.value = recipientName;
             recipientEmailInput.value = recipientEmail;
             isSavingDraft = false;
+            [recipientNameInput, recipientEmailInput].forEach((input) => {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
             lastSuggestedRecipient = {
                 name: recipientName,
                 email: recipientEmail
@@ -15152,6 +15156,19 @@ function initNavbarDateTime() {
 
             const prepCard = document.querySelector('[data-widget-id="agent-email-prep"]');
             if (prepCard) {
+                prepCard.classList.remove('widget-minimized');
+                const widgetState = getWidgetState();
+                widgetState['agent-email-prep'] = {
+                    ...(widgetState['agent-email-prep'] || {}),
+                    minimized: false
+                };
+                saveWidgetState(widgetState);
+
+                const dockItem = document.querySelector('[data-widget-dock="agent-email-prep"]');
+                if (dockItem) {
+                    dockItem.remove();
+                }
+
                 prepCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
