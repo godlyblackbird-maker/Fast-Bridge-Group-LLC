@@ -14505,6 +14505,21 @@ function initNavbarDateTime() {
                 || rawItem.status
                 || 'none'
             );
+            const assignedBy = assignmentRecord && assignmentRecord.assignedBy && typeof assignmentRecord.assignedBy === 'object'
+                ? assignmentRecord.assignedBy
+                : null;
+            const assignedByName = assignedBy
+                ? String(assignedBy.name || assignedBy.email || 'Unknown user').trim()
+                : '';
+            const assignedAt = assignmentRecord && assignmentRecord.assignedAt
+                ? new Date(assignmentRecord.assignedAt)
+                : null;
+            const assignedAtLabel = assignedAt && !Number.isNaN(assignedAt.getTime())
+                ? assignedAt.toLocaleDateString()
+                : '';
+            const assignmentSummary = assignedByName
+                ? (assignedAtLabel ? `Assigned by ${assignedByName} on ${assignedAtLabel}` : `Assigned by ${assignedByName}`)
+                : '';
 
             return {
                 propertyKey,
@@ -14513,9 +14528,7 @@ function initNavbarDateTime() {
                 statusValue,
                 statusLabel: formatAgentStatusLabel(statusValue),
                 assignmentRecord,
-                assignmentSummary: assignmentRecord
-                    ? buildAssignedByLabel(assignmentRecord)
-                    : '',
+                assignmentSummary,
                 locationLabel: normalizePropertyDetailDisplayText(rawItem.location || snapshot.areaLabel || snapshot.location || snapshot.marketInfo || '-') || '-',
                 imageUrl
             };
