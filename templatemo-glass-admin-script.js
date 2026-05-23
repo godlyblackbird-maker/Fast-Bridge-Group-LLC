@@ -14459,11 +14459,14 @@ function initNavbarDateTime() {
 
         function resolveDealWorkspaceState(item, workspaceUserRecord) {
             const rawItem = item && typeof item === 'object' ? item : {};
-            const resolvedState = resolveDealsListItemState(rawItem);
+            const rawSnapshot = rawItem.propertySnapshot && typeof rawItem.propertySnapshot === 'object'
+                ? { ...rawItem.propertySnapshot }
+                : {};
+            const propertyAddress = normalizePropertyDetailDisplayText(rawItem.propertyAddress || rawSnapshot.address || rawItem.address || 'Property') || 'Property';
             const propertyKey = makePropertyStorageKey(
                 rawItem.propertyKey
-                || resolvedState.propertyAddress
-                || resolvedState.snapshot?.address
+                || propertyAddress
+                || rawSnapshot.address
             );
 
             if (!propertyKey) {
@@ -14478,13 +14481,26 @@ function initNavbarDateTime() {
                 : {};
             const assignmentRecord = rawItem.assignmentRecord && typeof rawItem.assignmentRecord === 'object'
                 ? rawItem.assignmentRecord
-                : (resolvedState.assignmentMeta && typeof resolvedState.assignmentMeta === 'object'
-                    ? resolvedState.assignmentMeta
-                    : null);
+                : getPropertyAssignmentRecord(propertyKey);
+            const assignmentSnapshot = assignmentRecord && assignmentRecord.propertySnapshot && typeof assignmentRecord.propertySnapshot === 'object'
+                ? assignmentRecord.propertySnapshot
+                : null;
+            const snapshot = {
+                ...(assignmentSnapshot && typeof assignmentSnapshot === 'object' ? assignmentSnapshot : {}),
+                ...rawSnapshot,
+                address: normalizePropertyDetailDisplayText(rawSnapshot.address || assignmentSnapshot?.address || propertyAddress) || propertyAddress
+            };
+            const fallbackImageUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=900&q=80';
+            const imageUrl = String(rawItem.imageUrl || snapshot.propertyImages?.[0] || '').trim() || fallbackImageUrl;
+
+            if (!Array.isArray(snapshot.propertyImages) || !snapshot.propertyImages.length) {
+                snapshot.propertyImages = [imageUrl];
+            }
+
             const statusValue = normalizeAgentStatusValue(
                 rawItem.statusValue
                 || scopedStatuses[propertyKey]
-                || resolvedState.snapshot?.piqAgentStatus
+                || snapshot.piqAgentStatus
                 || rawItem.propertySnapshot?.piqAgentStatus
                 || rawItem.status
                 || 'none'
@@ -14492,16 +14508,18 @@ function initNavbarDateTime() {
 
             return {
                 propertyKey,
-                propertyAddress: resolvedState.propertyAddress,
-                snapshot: resolvedState.snapshot,
+                propertyAddress,
+                snapshot,
                 statusValue,
                 statusLabel: formatAgentStatusLabel(statusValue),
                 assignmentRecord,
                 assignmentSummary: assignmentRecord
                     ? buildAssignedByLabel(assignmentRecord)
-                    : resolvedState.assignmentSummary,
-                locationLabel: resolvedState.locationLabel,
-                imageUrl: resolvedState.imageUrl
+                    : '',
+                locationLabel: normalizePropertyDetailDisplayText(rawItem.location || snapshot.areaLabel || snapshot.location || snapshot.marketInfo || '-') || '-',
+                imageUrl,
+                listingStatusLabel: formatDealsListingStatus(snapshot.statusLabel || rawItem.status || 'active'),
+                listingStatusClassName: `is-${String(rawItem.status || snapshot.statusLabel || 'active').toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'active'}`
             };
         }
 
