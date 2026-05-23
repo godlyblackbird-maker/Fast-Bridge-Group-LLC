@@ -173,6 +173,50 @@
             max-width: 100%;
         }
 
+        .agent-email-prep-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 12px 0 10px;
+        }
+
+        .agent-email-prep-tool {
+            min-width: 44px;
+            min-height: 40px;
+            padding: 0 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(12, 18, 28, 0.52);
+            color: var(--text-primary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font: inherit;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+        }
+
+        .agent-email-prep-tool:hover,
+        .agent-email-prep-tool:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(var(--accent-light-rgb, 255, 255, 255), 0.45);
+            background: rgba(var(--accent-rgb, 5, 150, 105), 0.16);
+            outline: none;
+        }
+
+        .agent-email-prep-tool.is-active {
+            border-color: rgba(var(--accent-rgb, 5, 150, 105), 0.6);
+            background: rgba(var(--accent-rgb, 5, 150, 105), 0.2);
+            color: var(--gold-light);
+        }
+
+        .agent-email-prep-tool-label {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
         .users-page-title-logo {
             width: clamp(72px, 8vw, 102px);
             height: auto;
@@ -477,6 +521,14 @@
                         </label>
                         <div class="agent-email-prep-span-2 offer-email-editor-wrap">
                             <span class="offer-email-editor-label">Email Body</span>
+                            <div id="agent-workspace-email-toolbar" class="agent-email-prep-toolbar" role="toolbar" aria-label="Email body formatting tools">
+                                <button type="button" class="agent-email-prep-tool" data-agent-email-command="bold" aria-label="Bold" aria-pressed="false"><strong>B</strong></button>
+                                <button type="button" class="agent-email-prep-tool" data-agent-email-command="italic" aria-label="Italic" aria-pressed="false"><em>I</em></button>
+                                <button type="button" class="agent-email-prep-tool" data-agent-email-command="underline" aria-label="Underline" aria-pressed="false"><u>U</u></button>
+                                <button type="button" class="agent-email-prep-tool" data-agent-email-command="insertUnorderedList" aria-label="Bullet list"><span class="agent-email-prep-tool-label">• List</span></button>
+                                <button type="button" class="agent-email-prep-tool" data-agent-email-command="insertOrderedList" aria-label="Numbered list"><span class="agent-email-prep-tool-label">1. List</span></button>
+                                <button type="button" class="agent-email-prep-tool" data-agent-email-command="removeFormat" aria-label="Clear formatting"><span class="agent-email-prep-tool-label">Clear</span></button>
+                            </div>
                             <div id="agent-workspace-email-body" class="form-input offer-email-body offer-email-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="Draft the reusable email body here."></div>
                         </div>
                     </div>
@@ -584,7 +636,7 @@
         </svg>
     </button>
 
-    <script src="templatemo-glass-admin-script.js?v=20260523e"></script>
+    <script src="templatemo-glass-admin-script.js?v=20260523f"></script>
     <script>
         window.addEventListener('load', () => {
         });

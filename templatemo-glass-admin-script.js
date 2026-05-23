@@ -14815,6 +14815,7 @@ function initNavbarDateTime() {
         const senderNameInput = document.getElementById('agent-workspace-sender-name');
         const senderEmailInput = document.getElementById('agent-workspace-sender-email');
         const subjectInput = document.getElementById('agent-workspace-email-subject');
+        const formattingToolbar = document.getElementById('agent-workspace-email-toolbar');
         const bodyInput = document.getElementById('agent-workspace-email-body');
         const sendButton = document.getElementById('agent-workspace-send-btn');
         const signatureButton = document.getElementById('agent-workspace-signature-btn');
@@ -14827,7 +14828,7 @@ function initNavbarDateTime() {
         const docsList = document.getElementById('agent-workspace-docs-list');
         const docsNote = document.getElementById('agent-workspace-docs-note');
 
-        if (!recipientNameInput || !recipientEmailInput || !senderNameInput || !senderEmailInput || !subjectInput || !bodyInput || !sendButton || !signatureButton || !copySubjectButton || !copyBodyButton || !copyDocListButton || !categorySelect || !uploadButton || !uploadInput || !docsList || !docsNote) {
+        if (!recipientNameInput || !recipientEmailInput || !senderNameInput || !senderEmailInput || !subjectInput || !formattingToolbar || !bodyInput || !sendButton || !signatureButton || !copySubjectButton || !copyBodyButton || !copyDocListButton || !categorySelect || !uploadButton || !uploadInput || !docsList || !docsNote) {
             return;
         }
 
@@ -14848,6 +14849,7 @@ function initNavbarDateTime() {
         let emailPrepGmailSignatures = [];
         let emailPrepDefaultSignatureEmail = '';
         let emailPrepSignatureLoaded = false;
+        let savedBodySelectionRange = null;
 
         smtpConfigState.configured = Boolean(smtpConfigState.smtpUser && smtpConfigState.hasPassword && !smtpConfigState.pendingRequest);
 
@@ -14914,6 +14916,78 @@ function initNavbarDateTime() {
 
         function removeEmailPrepSignatureBlock() {
             Array.from(bodyInput.querySelectorAll('[data-agent-workspace-signature="true"]')).forEach((node) => node.remove());
+        }
+
+        function bodySelectionIsInsideEditor(selection) {
+            if (!selection || !selection.anchorNode || !selection.focusNode) {
+                return false;
+            }
+            return bodyInput.contains(selection.anchorNode) && bodyInput.contains(selection.focusNode);
+        }
+
+        function captureBodySelectionRange() {
+            const selection = window.getSelection();
+            if (!selection || !selection.rangeCount || !bodySelectionIsInsideEditor(selection)) {
+                return;
+            }
+            savedBodySelectionRange = selection.getRangeAt(0).cloneRange();
+        }
+
+        function restoreBodySelectionRange() {
+            const selection = window.getSelection();
+            if (!selection) {
+                return false;
+            }
+
+            selection.removeAllRanges();
+            if (savedBodySelectionRange) {
+                selection.addRange(savedBodySelectionRange);
+                return true;
+            }
+
+            const range = document.createRange();
+            range.selectNodeContents(bodyInput);
+            range.collapse(false);
+            selection.addRange(range);
+            return true;
+        }
+
+        function syncEmailPrepToolbarState() {
+            Array.from(formattingToolbar.querySelectorAll('[data-agent-email-command]')).forEach((button) => {
+                const command = String(button.getAttribute('data-agent-email-command') || '').trim();
+                const supportsState = command === 'bold' || command === 'italic' || command === 'underline';
+                if (!supportsState) {
+                    button.classList.remove('is-active');
+                    button.setAttribute('aria-pressed', 'false');
+                    return;
+                }
+
+                let isActive = false;
+                try {
+                    isActive = Boolean(document.queryCommandState(command));
+                } catch (_error) {
+                    isActive = false;
+                }
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
+
+        function executeEmailPrepCommand(command, value) {
+            bodyInput.focus();
+            restoreBodySelectionRange();
+
+            try {
+                document.execCommand('styleWithCSS', false, true);
+                document.execCommand(command, false, value);
+            } catch (_error) {
+                showDashboardToast('error', 'Formatting Failed', 'That formatting action is not available in this browser.');
+                return;
+            }
+
+            captureBodySelectionRange();
+            syncEmailPrepToolbarState();
+            saveDraft();
         }
 
         function applyEmailPrepSignature(signatureHtml) {
@@ -15306,6 +15380,7 @@ function initNavbarDateTime() {
             isSavingDraft = false;
             void syncSenderDefaults(true);
             syncRecipientDefaults();
+            syncEmailPrepToolbarState();
         }
 
         function renderEmptyState() {
@@ -15554,6 +15629,8 @@ function initNavbarDateTime() {
                 }
 
                 bodyInput.focus();
+                captureBodySelectionRange();
+                syncEmailPrepToolbarState();
                 showDashboardToast('success', 'Signature Inserted', 'Your connected Gmail signature was added to the email body.');
             } finally {
                 signatureButton.disabled = false;
@@ -15660,8 +15737,39 @@ function initNavbarDateTime() {
             input.addEventListener('change', saveDraft);
         });
 
+        Array.from(formattingToolbar.querySelectorAll('[data-agent-email-command]')).forEach((button) => {
+            const command = String(button.getAttribute('data-agent-email-command') || '').trim();
+            if (!command) {
+                return;
+            }
+
+            button.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+            });
+
+            button.addEventListener('click', () => {
+                executeEmailPrepCommand(command);
+            });
+        });
+
         subjectInput.addEventListener('input', saveDraft);
-        bodyInput.addEventListener('input', saveDraft);
+        bodyInput.addEventListener('input', () => {
+            captureBodySelectionRange();
+            syncEmailPrepToolbarState();
+            saveDraft();
+        });
+        bodyInput.addEventListener('mouseup', () => {
+            captureBodySelectionRange();
+            syncEmailPrepToolbarState();
+        });
+        bodyInput.addEventListener('keyup', () => {
+            captureBodySelectionRange();
+            syncEmailPrepToolbarState();
+        });
+        bodyInput.addEventListener('focus', () => {
+            captureBodySelectionRange();
+            syncEmailPrepToolbarState();
+        });
 
         uploadButton.addEventListener('click', () => {
             uploadInput.click();
