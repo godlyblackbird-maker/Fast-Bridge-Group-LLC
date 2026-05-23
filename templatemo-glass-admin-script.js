@@ -14817,6 +14817,7 @@ function initNavbarDateTime() {
         const subjectInput = document.getElementById('agent-workspace-email-subject');
         const bodyInput = document.getElementById('agent-workspace-email-body');
         const sendButton = document.getElementById('agent-workspace-send-btn');
+        const signatureButton = document.getElementById('agent-workspace-signature-btn');
         const copySubjectButton = document.getElementById('agent-workspace-copy-subject-btn');
         const copyBodyButton = document.getElementById('agent-workspace-copy-body-btn');
         const copyDocListButton = document.getElementById('agent-workspace-copy-doc-list-btn');
@@ -14826,7 +14827,7 @@ function initNavbarDateTime() {
         const docsList = document.getElementById('agent-workspace-docs-list');
         const docsNote = document.getElementById('agent-workspace-docs-note');
 
-        if (!recipientNameInput || !recipientEmailInput || !senderNameInput || !senderEmailInput || !subjectInput || !bodyInput || !sendButton || !copySubjectButton || !copyBodyButton || !copyDocListButton || !categorySelect || !uploadButton || !uploadInput || !docsList || !docsNote) {
+        if (!recipientNameInput || !recipientEmailInput || !senderNameInput || !senderEmailInput || !subjectInput || !bodyInput || !sendButton || !signatureButton || !copySubjectButton || !copyBodyButton || !copyDocListButton || !categorySelect || !uploadButton || !uploadInput || !docsList || !docsNote) {
             return;
         }
 
@@ -14839,10 +14840,14 @@ function initNavbarDateTime() {
         let smtpConfigState = {
             smtpUser: cleanFieldValue(cachedSmtpSettings && cachedSmtpSettings.smtpUser),
             hasPassword: Boolean(cachedSmtpSettings && cachedSmtpSettings.hasPassword),
+            smtpSignature: String(cachedSmtpSettings && cachedSmtpSettings.smtpSignature || '').trim(),
             pendingRequest: cachedSmtpSettings && cachedSmtpSettings.pendingRequest ? cachedSmtpSettings.pendingRequest : null,
             configured: false
         };
         let smtpStatusPromise = null;
+        let emailPrepGmailSignatures = [];
+        let emailPrepDefaultSignatureEmail = '';
+        let emailPrepSignatureLoaded = false;
 
         smtpConfigState.configured = Boolean(smtpConfigState.smtpUser && smtpConfigState.hasPassword && !smtpConfigState.pendingRequest);
 
@@ -14870,9 +14875,113 @@ function initNavbarDateTime() {
             return {
                 smtpUser,
                 hasPassword,
+                smtpSignature: String(normalizedSettings.smtpSignature || '').trim(),
                 pendingRequest,
                 configured: Boolean(smtpUser && hasPassword && !pendingRequest)
             };
+        }
+
+        function looksLikeEmailPrepHtml(value) {
+            return /<[a-z][\s\S]*>/i.test(String(value || ''));
+        }
+
+        function convertEmailPrepSignatureTextToHtml(value) {
+            const container = document.createElement('div');
+            String(value || '')
+                .split(/\r?\n/)
+                .forEach((line) => {
+                    const lineWrap = document.createElement('div');
+                    if (line) {
+                        lineWrap.textContent = line;
+                    } else {
+                        lineWrap.appendChild(document.createElement('br'));
+                    }
+                    container.appendChild(lineWrap);
+                });
+            return container.innerHTML.trim();
+        }
+
+        function getStoredEmailPrepSignatureHtml() {
+            const rawSignature = String(smtpConfigState.smtpSignature || cachedSmtpSettings && cachedSmtpSettings.smtpSignature || '').trim();
+            if (!rawSignature) {
+                return '';
+            }
+
+            return looksLikeEmailPrepHtml(rawSignature)
+                ? rawSignature
+                : convertEmailPrepSignatureTextToHtml(rawSignature);
+        }
+
+        function removeEmailPrepSignatureBlock() {
+            Array.from(bodyInput.querySelectorAll('[data-agent-workspace-signature="true"]')).forEach((node) => node.remove());
+        }
+
+        function applyEmailPrepSignature(signatureHtml) {
+            const html = String(signatureHtml || '').trim();
+            removeEmailPrepSignatureBlock();
+            if (!html) {
+                return false;
+            }
+
+            const hasBodyContent = String(bodyInput.innerHTML || '')
+                .replace(/^(<div><br><\/div>|<br>|&nbsp;|\s)+$/gi, '')
+                .trim();
+            const wrapper = document.createElement('div');
+            wrapper.dataset.agentWorkspaceSignature = 'true';
+            wrapper.innerHTML = html;
+
+            if (hasBodyContent) {
+                bodyInput.appendChild(document.createElement('br'));
+            }
+            bodyInput.appendChild(wrapper);
+            saveDraft();
+            return true;
+        }
+
+        async function ensureEmailPrepSignaturesLoaded() {
+            if (emailPrepSignatureLoaded) {
+                return;
+            }
+
+            const token = getAuthToken();
+            if (!token) {
+                emailPrepSignatureLoaded = true;
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/gmail/signatures', {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Could not load Gmail signatures.');
+                }
+
+                const payload = await response.json().catch(() => ({}));
+                emailPrepGmailSignatures = Array.isArray(payload && payload.signatures) ? payload.signatures : [];
+                emailPrepDefaultSignatureEmail = String(payload && payload.defaultSendAsEmail || '').trim();
+            } catch (_error) {
+                emailPrepGmailSignatures = [];
+                emailPrepDefaultSignatureEmail = '';
+            }
+
+            emailPrepSignatureLoaded = true;
+        }
+
+        function getDefaultEmailPrepSignatureHtml() {
+            const defaultSignature = emailPrepGmailSignatures.find((entry) => String(entry && entry.sendAsEmail || '').trim() === emailPrepDefaultSignatureEmail)
+                || emailPrepGmailSignatures.find((entry) => entry && entry.isDefault)
+                || emailPrepGmailSignatures.find((entry) => entry && entry.isPrimary)
+                || emailPrepGmailSignatures[0];
+
+            if (defaultSignature && defaultSignature.signature) {
+                return String(defaultSignature.signature || '').trim();
+            }
+
+            return getStoredEmailPrepSignatureHtml();
         }
 
         function getGmailSettingsHref() {
@@ -15427,6 +15536,29 @@ function initNavbarDateTime() {
 
         copySubjectButton.addEventListener('click', async () => {
             await copyTextValue(subjectInput.value, 'Subject Copied', 'Add a subject before copying it.');
+        });
+
+        signatureButton.addEventListener('click', async () => {
+            signatureButton.disabled = true;
+            const originalLabel = signatureButton.textContent;
+            signatureButton.textContent = 'Loading...';
+
+            try {
+                await ensureEmailPrepSignaturesLoaded();
+                const signatureHtml = getDefaultEmailPrepSignatureHtml();
+                const applied = applyEmailPrepSignature(signatureHtml);
+
+                if (!applied) {
+                    showDashboardToast('error', 'Signature Missing', 'No Gmail signature was found for this connected account.');
+                    return;
+                }
+
+                bodyInput.focus();
+                showDashboardToast('success', 'Signature Inserted', 'Your connected Gmail signature was added to the email body.');
+            } finally {
+                signatureButton.disabled = false;
+                signatureButton.textContent = originalLabel;
+            }
         });
 
         copyBodyButton.addEventListener('click', async () => {
