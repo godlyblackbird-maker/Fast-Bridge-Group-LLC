@@ -14196,6 +14196,40 @@ function initNavbarDateTime() {
         uploadInput.setAttribute('aria-hidden', 'true');
         list.parentElement.appendChild(uploadInput);
 
+        function getPropertyFilterDetailDocuments(propertyKey) {
+            const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+            if (!normalizedPropertyKey) {
+                return [];
+            }
+
+            return getUserScopedItems(PROPERTY_DETAIL_DOCUMENTS_KEY, workspaceUser.key)
+                .filter((item) => makePropertyStorageKey(item && item.propertyKey) === normalizedPropertyKey)
+                .sort((left, right) => (Number(right && right.updatedAt) || 0) - (Number(left && left.updatedAt) || 0));
+        }
+
+        function setPropertyFilterDetailDocuments(propertyKey, nextDocuments) {
+            const normalizedPropertyKey = makePropertyStorageKey(propertyKey);
+            const otherDocuments = getUserScopedItems(PROPERTY_DETAIL_DOCUMENTS_KEY, workspaceUser.key)
+                .filter((item) => makePropertyStorageKey(item && item.propertyKey) !== normalizedPropertyKey);
+            setUserScopedItems(PROPERTY_DETAIL_DOCUMENTS_KEY, workspaceUser.key, [...otherDocuments, ...(Array.isArray(nextDocuments) ? nextDocuments : [])]);
+        }
+
+        function mergePropertyFilterDocuments(primaryDocuments, secondaryDocuments) {
+            const merged = [];
+            const seenIds = new Set();
+
+            [...(Array.isArray(primaryDocuments) ? primaryDocuments : []), ...(Array.isArray(secondaryDocuments) ? secondaryDocuments : [])].forEach((documentItem) => {
+                const documentId = String(documentItem && documentItem.id || '').trim();
+                if (!documentId || seenIds.has(documentId)) {
+                    return;
+                }
+                seenIds.add(documentId);
+                merged.push(documentItem);
+            });
+
+            return merged.sort((left, right) => (Number(right && right.updatedAt) || 0) - (Number(left && left.updatedAt) || 0));
+        }
+
         uploadInput.addEventListener('change', async () => {
             const files = Array.from(uploadInput.files || []);
             const targetItem = pendingUploadPropertyItem;
@@ -14206,17 +14240,61 @@ function initNavbarDateTime() {
                 return;
             }
 
-            const propertyAddress = String(targetItem.propertyAddress || 'Property').trim() || 'Property';
-            const propertyKey = makePropertyStorageKey(targetItem.propertyKey || propertyAddress);
+            const targetSnapshot = targetItem.snapshot && typeof targetItem.snapshot === 'object'
+                ? targetItem.snapshot
+                : {};
+            const propertyAddress = normalizePropertyDetailDisplayText(
+                targetSnapshot.address
+                || targetItem.propertyAddress
+                || targetSnapshot.propertyAddress
+                || 'Property'
+            ) || 'Property';
+            const propertyKey = makePropertyStorageKey(propertyAddress);
             if (!propertyKey) {
                 showDashboardToast('error', 'Property Missing', 'FAST could not find a property key for these uploads.');
                 return;
             }
 
             try {
+                const uploadedDocuments = [];
+
                 for (const file of files) {
-                    await uploadFileToCloudStorage('property-detail', propertyKey, file);
+                    let uploadedDocument = null;
+
+                    try {
+                        uploadedDocument = await uploadFileToCloudStorage('property-detail', propertyKey, file);
+                    } catch (cloudError) {
+                        const documentId = `property-doc-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+                        await putOfferDocumentBlob(documentId, file);
+                        uploadedDocument = {
+                            id: documentId,
+                            label: file.name,
+                            fileName: file.name,
+                            fileSize: file.size,
+                            fileType: file.type || 'File',
+                            storage: 'indexeddb',
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                            propertyKey
+                        };
+                    }
+
+                    uploadedDocuments.push({
+                        ...uploadedDocument,
+                        propertyKey,
+                        label: file.name,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        fileType: file.type || uploadedDocument.fileType || 'File',
+                        updatedAt: Number(uploadedDocument.updatedAt) || Date.now()
+                    });
                 }
+
+                const persistedDocuments = mergePropertyFilterDocuments(
+                    uploadedDocuments,
+                    getPropertyFilterDetailDocuments(propertyKey)
+                );
+                setPropertyFilterDetailDocuments(propertyKey, persistedDocuments);
 
                 showDashboardToast('success', 'Property Documents Saved', `${files.length} file${files.length === 1 ? '' : 's'} uploaded for ${propertyAddress}. They will appear in Property Details.`);
             } catch (error) {
