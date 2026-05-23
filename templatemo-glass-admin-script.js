@@ -14517,9 +14517,7 @@ function initNavbarDateTime() {
                     ? buildAssignedByLabel(assignmentRecord)
                     : '',
                 locationLabel: normalizePropertyDetailDisplayText(rawItem.location || snapshot.areaLabel || snapshot.location || snapshot.marketInfo || '-') || '-',
-                imageUrl,
-                listingStatusLabel: formatDealsListingStatus(snapshot.statusLabel || rawItem.status || 'active'),
-                listingStatusClassName: `is-${String(rawItem.status || snapshot.statusLabel || 'active').toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'active'}`
+                imageUrl
             };
         }
 
