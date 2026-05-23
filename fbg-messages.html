@@ -1669,7 +1669,7 @@
                 hour: 'numeric',
                 minute: '2-digit'
             });
-            const MESSAGE_REACTION_OPTIONS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ”¥'];
+            const MESSAGE_REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
             const ISAAC_PREVIEW_USER_ID = 900001;
             const ISAAC_PREVIEW_FALLBACK_REACTION_USER_ID = 900099;
             const ISAAC_PREVIEW_ALLOWED_EMAILS = new Set([
@@ -1745,7 +1745,7 @@
                         recipientUserId: previewReactionUserId,
                         body: 'Hey Isaac, this is a fake preview contact so you can test the hover emoji reaction bubble without messaging a real FAST user.',
                         reactions: [
-                            { emoji: 'ðŸ‘€', userId: previewContactUserId, createdAt: new Date(now - (44 * 60000)).toISOString() }
+                            { emoji: '👀', userId: previewContactUserId, createdAt: new Date(now - (44 * 60000)).toISOString() }
                         ],
                         createdAt: new Date(now - (46 * 60000)).toISOString(),
                         editedAt: null,
@@ -1760,7 +1760,7 @@
                         recipientUserId: previewContactUserId,
                         body: 'Perfect. I only want this preview thread visible to my Isaac admin session, and I want the reaction bubble to show on hover at the top-right edge.',
                         reactions: [
-                            { emoji: 'ðŸ”¥', userId: previewReactionUserId, createdAt: new Date(now - (31 * 60000)).toISOString() }
+                            { emoji: '🔥', userId: previewReactionUserId, createdAt: new Date(now - (31 * 60000)).toISOString() }
                         ],
                         createdAt: new Date(now - (34 * 60000)).toISOString(),
                         editedAt: null,
@@ -1775,8 +1775,8 @@
                         recipientUserId: previewReactionUserId,
                         body: 'That is exactly it. Hover any of these bubbles and click the emoji icon to see how reactions feel on a realistic-looking thread.',
                         reactions: [
-                            { emoji: 'ðŸ‘', userId: previewContactUserId, createdAt: new Date(now - (14 * 60000)).toISOString() },
-                            { emoji: 'â¤ï¸', userId: previewReactionUserId, createdAt: new Date(now - (12 * 60000)).toISOString() }
+                            { emoji: '👍', userId: previewContactUserId, createdAt: new Date(now - (14 * 60000)).toISOString() },
+                            { emoji: '❤️', userId: previewReactionUserId, createdAt: new Date(now - (12 * 60000)).toISOString() }
                         ],
                         createdAt: new Date(now - (16 * 60000)).toISOString(),
                         editedAt: null,
@@ -2036,7 +2036,7 @@
                 const trigger = document.createElement('summary');
                 trigger.className = 'messages-chat-reaction-trigger';
                 trigger.setAttribute('aria-label', 'Add emoji reaction');
-                trigger.textContent = 'ðŸ˜Š';
+                trigger.textContent = '😊';
                 menu.appendChild(trigger);
 
                 const picker = document.createElement('div');

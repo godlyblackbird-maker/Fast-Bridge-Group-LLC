@@ -14185,6 +14185,9 @@ function initNavbarDateTime() {
         let pendingUploadPropertyItem = null;
         const workspaceUser = getWorkspaceUserContext();
 
+        collapseUserScopedItemsToPrimaryKey(IMPORTED_PROPERTIES_KEY, workspaceUser, { silent: true });
+        collapseUserScopedItemsToPrimaryKey(DEALS_CLICKED_KEY, workspaceUser, { silent: true });
+
         const uploadInput = document.createElement('input');
         uploadInput.type = 'file';
         uploadInput.multiple = true;
@@ -14467,11 +14470,11 @@ function initNavbarDateTime() {
                 itemMap.set(resolvedItem.propertyKey, mergeFilterItem(existingItem, resolvedItem, sourceKey));
             }
 
-            getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key).forEach((item) => {
+            getUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key).forEach((item) => {
                 addResolvedItem(item, 'clicked');
             });
 
-            getExactUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key).forEach((item) => {
+            getUserScopedItems(IMPORTED_PROPERTIES_KEY, workspaceUser.key).forEach((item) => {
                 addResolvedItem(item, 'imported');
             });
 

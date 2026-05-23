@@ -19176,6 +19176,10 @@ body.analytics-reboot .analytics-my-file-count {
     min-width: 0;
 }
 
+.comps-map-diagnostics-bar[hidden] {
+    display: none;
+}
+
 .comps-map-control-cluster-diagnostics .comps-map-toolbar {
     flex: 0 0 auto;
     gap: 6px;
@@ -19222,6 +19226,10 @@ body.analytics-reboot .analytics-my-file-count {
     margin-top: 0;
     padding: 5px 8px;
     border-radius: 10px;
+}
+
+.comps-map-control-cluster-diagnostics .comps-map-status-badge[hidden] {
+    display: none;
 }
 
 .comps-map-control-cluster-diagnostics .comps-map-status-badge strong {
