@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "test": "node --test tests/built-in-bypass-auth.test.js tests/twilio-inbox-conversations.test.js",
+    "test:auth-bypass": "node --test tests/built-in-bypass-auth.test.js",
+    "test:twilio-inbox": "node --test tests/twilio-inbox-conversations.test.js",
     "twilio:recover": "node scripts/recover-twilio-inbox.js",
     "share": "node scripts/share-link.js",
     "desktop:icon": "node scripts/generate-desktop-icon.js",

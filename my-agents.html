@@ -924,6 +924,7 @@
                     <h1 class="page-title">My Agents | FAST BRIDGE GROUP LLC</h1>
                 </div>
                 <div class="navbar-right">
+                    <!-- PROTECTED BLOCK: My Agents page search/workspace entry is production-stable. Do not modify, refactor, rename, remove, or alter this block unless the user explicitly instructs it. -->
                     <div class="search-box">
                         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"/>
@@ -2213,6 +2214,7 @@
                 ].some((value) => normalizeCellValue(value).toLowerCase().includes(normalizedQuery));
             }
 
+            // PROTECTED BLOCK: My Agents search/filter behavior is production-stable. Do not modify, refactor, rename, remove, or alter this block unless the user explicitly instructs it.
             function applySearchFilter() {
                 const query = getSearchQuery();
                 const rowElements = Array.from(body.querySelectorAll('tr'));

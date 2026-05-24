@@ -25,6 +25,7 @@
     }
 
     const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const activeMessageAttachmentPreviewUrls = new Set();
     const MESSAGES_TIMEZONE = 'America/Los_Angeles';
     const messageDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
         timeZone: MESSAGES_TIMEZONE,
@@ -569,18 +570,123 @@
         return badge;
     }
 
+    function scheduleAttachmentObjectUrlCleanup(url, delay = 30000) {
+        const objectUrl = String(url || '').trim();
+        if (!objectUrl) {
+            return;
+        }
+        window.setTimeout(() => {
+            try {
+                URL.revokeObjectURL(objectUrl);
+            } catch (error) {
+                // Ignore object URL cleanup failures.
+            }
+        }, delay);
+    }
+
+    function revokeActiveAttachmentPreviewUrls() {
+        activeMessageAttachmentPreviewUrls.forEach((objectUrl) => {
+            try {
+                URL.revokeObjectURL(objectUrl);
+            } catch (error) {
+                // Ignore object URL cleanup failures.
+            }
+        });
+        activeMessageAttachmentPreviewUrls.clear();
+    }
+
+    async function fetchAttachmentBlob(attachment, download) {
+        if (!authToken) {
+            throw new Error('Sign in again before opening attachments.');
+        }
+
+        const requestPath = String(
+            download
+                ? (attachment && (attachment.downloadPath || attachment.contentPath))
+                : (attachment && (attachment.contentPath || attachment.downloadPath))
+            || ''
+        ).trim();
+
+        if (!requestPath) {
+            throw new Error('Attachment is unavailable.');
+        }
+
+        const response = await fetch(requestPath, {
+            headers: {
+                Authorization: `Bearer ${authToken}`
+            }
+        });
+
+        if (!response.ok) {
+            let payload = null;
+            try {
+                payload = await response.json();
+            } catch (error) {
+                payload = null;
+            }
+            throw new Error(payload && payload.error ? payload.error : 'The attachment could not be opened.');
+        }
+
+        return response.blob();
+    }
+
+    async function openMessageAttachment(attachment, download = false) {
+        const blob = await fetchAttachmentBlob(attachment, download);
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        if (download) {
+            link.download = attachment.fileName || 'attachment';
+        } else {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+        }
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        scheduleAttachmentObjectUrlCleanup(objectUrl);
+    }
+
+    async function applyAttachmentPreviewSource(node, attachment) {
+        if (!node || !attachment) {
+            return;
+        }
+
+        const blob = await fetchAttachmentBlob(attachment, false);
+        if (!node.isConnected) {
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(blob);
+        activeMessageAttachmentPreviewUrls.add(objectUrl);
+        node.src = objectUrl;
+        if (node instanceof HTMLVideoElement || node instanceof HTMLAudioElement) {
+            node.load();
+        }
+    }
+
+    function handleAttachmentActionError(error) {
+        setChatStatus(String(error && error.message || 'The attachment could not be opened.'), true);
+    }
+
     function buildAttachmentPreviewNode(attachment) {
         if (isImageAttachment(attachment)) {
             const previewLink = document.createElement('a');
             previewLink.className = 'messages-chat-attachment-link';
-            previewLink.href = attachment.downloadPath || attachment.contentPath;
-            previewLink.target = '_blank';
-            previewLink.rel = 'noopener noreferrer';
+            previewLink.href = '#';
+            previewLink.addEventListener('click', async (event) => {
+                event.preventDefault();
+                try {
+                    await openMessageAttachment(attachment, false);
+                } catch (error) {
+                    handleAttachmentActionError(error);
+                }
+            });
 
             const image = document.createElement('img');
             image.className = 'messages-chat-attachment-preview';
-            image.src = attachment.contentPath;
             image.alt = attachment.fileName || 'Attachment preview';
+            void applyAttachmentPreviewSource(image, attachment).catch(handleAttachmentActionError);
             previewLink.appendChild(image);
             return previewLink;
         }
@@ -588,27 +694,27 @@
         if (isPdfAttachment(attachment)) {
             const frame = document.createElement('iframe');
             frame.className = 'messages-chat-attachment-embed';
-            frame.src = attachment.contentPath;
             frame.loading = 'lazy';
             frame.title = attachment.fileName || 'PDF attachment preview';
+            void applyAttachmentPreviewSource(frame, attachment).catch(handleAttachmentActionError);
             return frame;
         }
 
         if (isVideoAttachment(attachment)) {
             const video = document.createElement('video');
             video.className = 'messages-chat-attachment-video';
-            video.src = attachment.contentPath;
             video.controls = true;
             video.preload = 'metadata';
+            void applyAttachmentPreviewSource(video, attachment).catch(handleAttachmentActionError);
             return video;
         }
 
         if (isAudioAttachment(attachment)) {
             const audio = document.createElement('audio');
             audio.className = 'messages-chat-attachment-audio';
-            audio.src = attachment.contentPath;
             audio.controls = true;
             audio.preload = 'metadata';
+            void applyAttachmentPreviewSource(audio, attachment).catch(handleAttachmentActionError);
             return audio;
         }
 
@@ -949,6 +1055,7 @@
 
     function renderConversation(messages) {
         const items = Array.isArray(messages) ? messages : [];
+        revokeActiveAttachmentPreviewUrls();
         thread.innerHTML = '';
 
         if (items.length === 0) {
@@ -1015,9 +1122,7 @@
 
                         const link = document.createElement('a');
                         link.className = 'messages-chat-attachment-link';
-                        link.href = attachment.downloadPath || attachment.contentPath;
-                        link.target = '_blank';
-                        link.rel = 'noopener noreferrer';
+                        link.href = '#';
                         link.innerHTML = `
                             <div class="messages-chat-attachment-copy">
                                 <div class="messages-chat-attachment-head">
@@ -1026,6 +1131,14 @@
                                 <span>${escapeHtml(formatFileSize(attachment.fileSize))}${attachment.fileType ? ` • ${escapeHtml(attachment.fileType)}` : ''}</span>
                             </div>
                         `;
+                        link.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            try {
+                                await openMessageAttachment(attachment, !isImageAttachment(attachment) && !isPdfAttachment(attachment) && !isVideoAttachment(attachment) && !isAudioAttachment(attachment));
+                            } catch (error) {
+                                handleAttachmentActionError(error);
+                            }
+                        });
                         const attachmentHead = link.querySelector('.messages-chat-attachment-head');
                         if (attachmentHead) {
                             attachmentHead.prepend(buildAttachmentBadge(attachment));

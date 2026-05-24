@@ -3784,9 +3784,14 @@
             let campaignReplyAddressOverrides = loadCampaignReplyAddressOverrides();
             let campaignReplyOffersEmailOverrides = loadCampaignReplyOffersEmailOverrides();
             let twilioInboxConversations = [];
+            let twilioInboxDebugSummary = {
+                mergedConversationCount: 0,
+                mergedSourceConversationCount: 0
+            };
             let activeTwilioConversationKey = '';
             let activeTwilioDraftContact = null;
             let activeTwilioInboxMessages = [];
+            const activeTwilioAttachmentObjectUrls = new Set();
             const campaignReplyScheduledStatusByConversationKey = new Map();
             let activeTwilioReactionPickerMessageId = 0;
             const campaignReplyScheduledMessageByConversationKey = new Map(Object.entries(loadCampaignReplyScheduledMessages()));
@@ -4210,6 +4215,7 @@
                 );
             }
             let twilioInboxRefreshHandle = null;
+            let twilioInboxRefreshPromise = null;
             let pendingCampaignMediaItems = [];
             let pendingReplyMediaItems = [];
             let pendingCampaignScheduleAt = '';
@@ -5566,6 +5572,20 @@
                 campaignReplyThreadCount.textContent = `(${safeCount})`;
             }
 
+            function getTwilioInboxReadyStatusMessage() {
+                const baseMessage = twilioInboxConversations.length
+                    ? `${twilioInboxConversations.length} Twilio thread${twilioInboxConversations.length === 1 ? '' : 's'} ready`
+                    : 'Twilio inbox ready';
+
+                if (Number(twilioInboxDebugSummary.mergedConversationCount) > 0) {
+                    const mergedConversationCount = Math.max(0, Number(twilioInboxDebugSummary.mergedConversationCount) || 0);
+                    const mergedSourceConversationCount = Math.max(0, Number(twilioInboxDebugSummary.mergedSourceConversationCount) || 0);
+                    return `${baseMessage} - merge guard active on ${mergedConversationCount} thread${mergedConversationCount === 1 ? '' : 's'} (${mergedSourceConversationCount} legacy merge${mergedSourceConversationCount === 1 ? '' : 's'})`;
+                }
+
+                return baseMessage;
+            }
+
             function getFilteredTwilioInboxConversations() {
                 const searchTerm = String(campaignReplySearchTerm || '').trim().toLowerCase();
                 return twilioInboxConversations.filter((conversation) => {
@@ -6312,9 +6332,13 @@
 
                     const meta = document.createElement('span');
                     meta.className = 'campaign-reply-conversation-meta';
-                    meta.textContent = conversation.campaignName
+                    const baseMeta = conversation.campaignName
                         ? `${conversation.contactPhone} - ${conversation.campaignName}`
                         : conversation.contactPhone;
+                    const mergedSourceConversationCount = Math.max(1, Number(conversation.mergedSourceConversationCount) || 1);
+                    meta.textContent = mergedSourceConversationCount > 1
+                        ? `${baseMeta} - merged ${mergedSourceConversationCount} legacy threads`
+                        : baseMeta;
 
                     const badge = document.createElement('span');
                     badge.className = 'campaign-reply-badge';
@@ -6415,7 +6439,7 @@
                 const wrap = document.createElement('div');
                 wrap.className = 'campaign-reply-attachments';
 
-                const buildAuthenticatedAttachmentUrl = (rawUrl, options = {}) => {
+                const buildAttachmentRequestUrl = (rawUrl, options = {}) => {
                     const baseUrl = String(rawUrl || '').trim();
                     if (!baseUrl) {
                         return '';
@@ -6423,13 +6447,8 @@
 
                     const shouldDownload = Boolean(options && options.download);
 
-                    const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-
                     try {
                         const url = new URL(baseUrl, window.location.origin);
-                        if (authToken) {
-                            url.searchParams.set('token', authToken);
-                        }
                         if (shouldDownload) {
                             url.searchParams.set('download', '1');
                         }
@@ -6459,12 +6478,88 @@
                     return extension ? `twilio-${kind}-${index + 1}.${extension}` : `twilio-${kind}-${index + 1}`;
                 };
 
+                const trackAttachmentObjectUrl = (objectUrl) => {
+                    const normalizedUrl = String(objectUrl || '').trim();
+                    if (!normalizedUrl) {
+                        return '';
+                    }
+                    activeTwilioAttachmentObjectUrls.add(normalizedUrl);
+                    return normalizedUrl;
+                };
+
+                const fetchAttachmentBlob = async (rawUrl, options = {}) => {
+                    const requestUrl = buildAttachmentRequestUrl(rawUrl, options);
+                    if (!requestUrl) {
+                        throw new Error('Attachment is unavailable.');
+                    }
+
+                    const response = await fetch(requestUrl, {
+                        method: 'GET',
+                        headers: getCampaignAuthHeaders()
+                    });
+
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('Sign in again to open this attachment.');
+                    }
+
+                    if (!response.ok) {
+                        throw new Error('Unable to load the attachment.');
+                    }
+
+                    return response.blob();
+                };
+
+                const applyAttachmentMediaSource = async (mediaNode, rawUrl, options = {}) => {
+                    if (!mediaNode || !rawUrl) {
+                        return;
+                    }
+
+                    try {
+                        const blob = await fetchAttachmentBlob(rawUrl, options);
+                        if (!mediaNode.isConnected) {
+                            return;
+                        }
+
+                        const objectUrl = trackAttachmentObjectUrl(URL.createObjectURL(blob));
+                        mediaNode.src = objectUrl;
+                        if (mediaNode instanceof HTMLVideoElement || mediaNode instanceof HTMLAudioElement) {
+                            mediaNode.load();
+                        }
+                    } catch (error) {
+                        if (mediaNode instanceof HTMLImageElement) {
+                            mediaNode.alt = 'Unable to load attachment preview';
+                        }
+                    }
+                };
+
+                const triggerAttachmentDownload = async (rawUrl, fileName) => {
+                    const blob = await fetchAttachmentBlob(rawUrl, { download: true });
+                    const objectUrl = trackAttachmentObjectUrl(URL.createObjectURL(blob));
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = objectUrl;
+                    downloadLink.download = fileName || 'attachment';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                };
+
+                const openAttachmentInNewTab = async (rawUrl) => {
+                    const blob = await fetchAttachmentBlob(rawUrl);
+                    const objectUrl = trackAttachmentObjectUrl(URL.createObjectURL(blob));
+                    const openLink = document.createElement('a');
+                    openLink.href = objectUrl;
+                    openLink.target = '_blank';
+                    openLink.rel = 'noopener noreferrer';
+                    document.body.appendChild(openLink);
+                    openLink.click();
+                    document.body.removeChild(openLink);
+                };
+
                 attachments.forEach((attachment, index) => {
                     const kind = String(attachment?.kind || '').trim().toLowerCase();
                     const contentType = String(attachment?.contentType || '').trim();
-                    const url = buildAuthenticatedAttachmentUrl(attachment?.url || '');
-                    const downloadUrl = buildAuthenticatedAttachmentUrl(attachment?.url || '', { download: true });
-                    if (!url) {
+                    const rawUrl = String(attachment?.url || '').trim();
+                    if (!rawUrl) {
                         return;
                     }
 
@@ -6478,9 +6573,9 @@
 
                         if (mediaNode instanceof HTMLImageElement) {
                             mediaNode.className = 'campaign-reply-attachment-image';
-                            mediaNode.src = url;
                             mediaNode.alt = message.direction === 'outgoing' ? 'Sent photo attachment' : 'Received photo attachment';
                             mediaNode.loading = 'lazy';
+                            void applyAttachmentMediaSource(mediaNode, rawUrl);
                         } else {
                             mediaNode.className = 'campaign-reply-attachment-video';
                             mediaNode.controls = true;
@@ -6488,22 +6583,25 @@
                             mediaNode.playsInline = true;
                             mediaNode.setAttribute('controlsList', 'nodownload');
                             mediaNode.setAttribute('aria-label', message.direction === 'outgoing' ? 'Sent video attachment' : 'Received video attachment');
-
-                            const source = document.createElement('source');
-                            source.src = url;
-                            if (contentType) {
-                                source.type = contentType;
-                            }
-                            mediaNode.appendChild(source);
+                            void applyAttachmentMediaSource(mediaNode, rawUrl);
                         }
 
                         const download = document.createElement('a');
                         download.className = 'campaign-reply-attachment-download';
-                        download.href = downloadUrl || url;
-                        download.download = buildAttachmentDownloadName(attachment, index);
+                        download.href = '#';
                         download.setAttribute('aria-label', `Download ${kind} ${index + 1}`);
                         download.title = kind === 'video' ? 'Download video' : 'Download image';
                         download.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a1 1 0 0 1 1 1v8.59l2.3-2.29a1 1 0 1 1 1.4 1.41l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.41L11 12.59V4a1 1 0 0 1 1-1Zm-7 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Z"></path></svg>';
+                        download.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            try {
+                                await triggerAttachmentDownload(rawUrl, buildAttachmentDownloadName(attachment, index));
+                            } catch (error) {
+                                if (typeof window.showDashboardToast === 'function') {
+                                    window.showDashboardToast('error', 'Attachment Failed', error.message || 'Unable to download this attachment.');
+                                }
+                            }
+                        });
 
                         row.append(mediaNode, download);
                         wrap.appendChild(row);
@@ -6512,9 +6610,7 @@
 
                     const link = document.createElement('a');
                     link.className = 'campaign-reply-attachment-link';
-                    link.href = url;
-                    link.target = '_blank';
-                    link.rel = 'noopener noreferrer';
+                    link.href = '#';
 
                     const label = document.createElement('strong');
                     label.textContent = kind ? `${kind.charAt(0).toUpperCase()}${kind.slice(1)} attachment` : 'Attachment';
@@ -6524,12 +6620,33 @@
                     meta.textContent = contentType || 'Open file';
 
                     link.append(label, meta);
+                    link.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        try {
+                            await openAttachmentInNewTab(rawUrl);
+                        } catch (error) {
+                            if (typeof window.showDashboardToast === 'function') {
+                                window.showDashboardToast('error', 'Attachment Failed', error.message || 'Unable to open this attachment.');
+                            }
+                        }
+                    });
                     wrap.appendChild(link);
                 });
 
                 if (wrap.childElementCount > 0) {
                     bubble.appendChild(wrap);
                 }
+            }
+
+            function revokeActiveTwilioAttachmentObjectUrls() {
+                activeTwilioAttachmentObjectUrls.forEach((objectUrl) => {
+                    try {
+                        URL.revokeObjectURL(objectUrl);
+                    } catch (error) {
+                        // Ignore object URL cleanup failures.
+                    }
+                });
+                activeTwilioAttachmentObjectUrls.clear();
             }
 
             function getPendingScheduledThreadMessages(conversation, messages = []) {
@@ -6619,6 +6736,7 @@
                 }
 
                 activeTwilioInboxMessages = Array.isArray(messages) ? messages.slice() : [];
+                revokeActiveTwilioAttachmentObjectUrls();
 
                 campaignReplyThread.replaceChildren();
 
@@ -6781,6 +6899,10 @@
                     }
 
                     twilioInboxConversations = Array.isArray(data.conversations) ? data.conversations : [];
+                    twilioInboxDebugSummary = {
+                        mergedConversationCount: Math.max(0, Number(data?.debug?.mergedConversationCount) || 0),
+                        mergedSourceConversationCount: Math.max(0, Number(data?.debug?.mergedSourceConversationCount) || 0)
+                    };
                     if (!twilioInboxConversations.length
                         && twilioMessagingAccessState.isAdmin
                         && campaignRecoverInboxButton
@@ -6808,10 +6930,7 @@
                         activeTwilioConversationKey = preferredConversation?.conversationKey || (twilioInboxConversations[0]?.conversationKey || '');
                     }
 
-                    setCampaignRepliesStatus(
-                        twilioInboxConversations.length ? `${twilioInboxConversations.length} Twilio thread${twilioInboxConversations.length === 1 ? '' : 's'} ready` : 'Twilio inbox ready',
-                        'ready'
-                    );
+                    setCampaignRepliesStatus(getTwilioInboxReadyStatusMessage(), 'ready');
                     renderTwilioReplyConversations();
                     renderCampaignOutreachPanel();
 
@@ -6828,12 +6947,37 @@
                 } catch (error) {
                     setCampaignRepliesStatus(error.message || 'Twilio inbox unavailable', 'offline');
                     twilioInboxConversations = [];
+                    twilioInboxDebugSummary = {
+                        mergedConversationCount: 0,
+                        mergedSourceConversationCount: 0
+                    };
                     publishTwilioUnreadState([]);
                     activeTwilioConversationKey = '';
                     renderTwilioReplyConversations();
                     renderTwilioReplyThread([], null);
                     renderCampaignOutreachPanel();
                 }
+            }
+
+            function requestTwilioInboxRefresh(options = {}) {
+                const config = options && typeof options === 'object' ? options : {};
+                if (document.hidden && !config.force) {
+                    return Promise.resolve();
+                }
+
+                if (twilioInboxRefreshPromise) {
+                    return twilioInboxRefreshPromise;
+                }
+
+                twilioInboxRefreshPromise = loadTwilioInboxConversations({
+                    preferredConversationKey: activeTwilioConversationKey,
+                    markRead: false,
+                    ...config
+                }).finally(() => {
+                    twilioInboxRefreshPromise = null;
+                });
+
+                return twilioInboxRefreshPromise;
             }
 
             if (campaignReplySearchInput) {
@@ -7540,17 +7684,27 @@
             (async () => {
                 await loadTwilioStatus();
                 fetchCampaignOutreachDashboard();
-                await loadTwilioInboxConversations({ markRead: true });
+                await requestTwilioInboxRefresh({ markRead: true, force: true });
             })().catch(() => {
                 fetchCampaignOutreachDashboard();
-                loadTwilioInboxConversations({ markRead: true });
+                requestTwilioInboxRefresh({ markRead: true, force: true });
             });
 
             if (!twilioInboxRefreshHandle) {
                 twilioInboxRefreshHandle = window.setInterval(() => {
-                    loadTwilioInboxConversations({ preferredConversationKey: activeTwilioConversationKey, markRead: false });
-                }, 20000);
+                    void requestTwilioInboxRefresh();
+                }, 12000);
             }
+
+            window.addEventListener('focus', () => {
+                void requestTwilioInboxRefresh({ force: true });
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    void requestTwilioInboxRefresh({ force: true });
+                }
+            });
         })();
     </script>
 </body>

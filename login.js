@@ -19,14 +19,6 @@ const KNOWN_EMAIL_GROUPS = [
 const KNOWN_EMAIL_ALIAS_LOOKUP = new Map();
 const AUTH_USER_LOCK_KEY = 'authVerifiedUserLock';
 const AUTH_TAB_SNAPSHOT_KEY = 'authTabSnapshot';
-const ISAAC_ADMIN_BYPASS_CODE = '315598';
-const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
-const STEVE_ADMIN_BYPASS_CODE = '123777';
-const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
-const USER_TEST_BASIC_BYPASS_CODE = '315598';
-const USER_TEST_BASIC_BYPASS_TOKEN = 'userTestBasicBypassToken';
-const PREMIUM_TEST_BYPASS_CODE = '315598';
-const PREMIUM_TEST_BYPASS_TOKEN = 'premiumTestBypassToken';
 const LOGIN_HOMEPAGE_THEME_KEY = 'homepageTheme';
 const LOGIN_HOMEPAGE_THEME_STORE_KEY = 'homepageThemeByUser';
 const LOGIN_THEME_STORAGE_KEY = 'dashboardThemeByUser';
@@ -52,30 +44,6 @@ const LOGIN_THEME_LABELS = Object.freeze({
 });
 const LOGIN_THEME_LOGO_PATHS = Object.freeze({
   cyberpunk: 'png photos/CYBERPUNK LOGO.png'
-});
-const ISAAC_ADMIN_BYPASS_USER = Object.freeze({
-  email: 'isaac.haro@fastbridgegroupllc.com',
-  name: 'Isaac Haro',
-  role: 'admin',
-  id: 'admin-bypass-isaac'
-});
-const STEVE_ADMIN_BYPASS_USER = Object.freeze({
-  email: 'steve.medina@fastbridgegroupllc.com',
-  name: 'Steve Medina',
-  role: 'admin',
-  id: 'admin-bypass-steve'
-});
-const USER_TEST_BASIC_BYPASS_USER = Object.freeze({
-  email: 'user.test.acc@fastbridgegroupllc.com',
-  name: 'USER TEST ACC',
-  role: 'user',
-  id: 'basic-user-bypass-user-test-acc'
-});
-const PREMIUM_TEST_BYPASS_USER = Object.freeze({
-  email: 'premium.acc@fastbridgegroupllc.com',
-  name: 'PREMIUM ACC',
-  role: 'premium user',
-  id: 'premium-user-bypass-premium-acc'
 });
 let loginBlacklightFluidModulePromise = null;
 let loginBlacklightFluidCleanup = null;
@@ -542,119 +510,6 @@ function persistAuthLock(userLike, token) {
   }));
 }
 
-function requestAdminBypassCode(promptLabel, fallbackLabel, fallbackCode) {
-  const normalizedPromptLabel = String(promptLabel || '').trim();
-  const normalizedFallbackLabel = String(fallbackLabel || '').trim() || 'this admin';
-  const normalizedFallbackCode = String(fallbackCode || '').trim();
-
-  if (typeof window.prompt === 'function') {
-    try {
-      return String(window.prompt(normalizedPromptLabel, '') || '').trim();
-    } catch (_error) {
-      // Fall through for embedded browsers that expose prompt but do not support it.
-    }
-  }
-
-  if (!normalizedFallbackCode) {
-    return '';
-  }
-
-  const confirmed = window.confirm(`Prompt is unavailable in this browser. Continue with the built-in ${normalizedFallbackLabel} bypass on this device?`);
-  return confirmed ? normalizedFallbackCode : '';
-}
-
-function startIsaacAdminBypass() {
-  const enteredCode = requestAdminBypassCode(
-    'Enter Isaac Haro admin bypass code:',
-    'Isaac Haro admin',
-    ISAAC_ADMIN_BYPASS_CODE
-  );
-  if (!enteredCode) {
-    return { ok: false, reason: 'cancelled' };
-  }
-
-  if (enteredCode !== ISAAC_ADMIN_BYPASS_CODE) {
-    return { ok: false, reason: 'invalid' };
-  }
-
-  localStorage.setItem('authToken', ISAAC_ADMIN_BYPASS_TOKEN);
-  localStorage.setItem('bypassAuth', 'true');
-  localStorage.setItem('bypassProfile', JSON.stringify(ISAAC_ADMIN_BYPASS_USER));
-  persistAuthenticatedUser(ISAAC_ADMIN_BYPASS_USER);
-  persistAuthLock(ISAAC_ADMIN_BYPASS_USER, ISAAC_ADMIN_BYPASS_TOKEN);
-  localStorage.removeItem('registeredEmail');
-  return { ok: true };
-}
-
-function startSteveAdminBypass() {
-  const enteredCode = requestAdminBypassCode(
-    'Enter Steve Medina admin bypass code:',
-    'Steve Medina admin',
-    STEVE_ADMIN_BYPASS_CODE
-  );
-  if (!enteredCode) {
-    return { ok: false, reason: 'cancelled' };
-  }
-
-  if (enteredCode !== STEVE_ADMIN_BYPASS_CODE) {
-    return { ok: false, reason: 'invalid' };
-  }
-
-  localStorage.setItem('authToken', STEVE_ADMIN_BYPASS_TOKEN);
-  localStorage.setItem('bypassAuth', 'true');
-  localStorage.setItem('bypassProfile', JSON.stringify(STEVE_ADMIN_BYPASS_USER));
-  persistAuthenticatedUser(STEVE_ADMIN_BYPASS_USER);
-  persistAuthLock(STEVE_ADMIN_BYPASS_USER, STEVE_ADMIN_BYPASS_TOKEN);
-  localStorage.removeItem('registeredEmail');
-  return { ok: true };
-}
-
-function startUserTestBasicBypass() {
-  const enteredCode = requestAdminBypassCode(
-    'Enter USER TEST ACC basic user bypass code:',
-    'USER TEST ACC basic user',
-    USER_TEST_BASIC_BYPASS_CODE
-  );
-  if (!enteredCode) {
-    return { ok: false, reason: 'cancelled' };
-  }
-
-  if (enteredCode !== USER_TEST_BASIC_BYPASS_CODE) {
-    return { ok: false, reason: 'invalid' };
-  }
-
-  localStorage.setItem('authToken', USER_TEST_BASIC_BYPASS_TOKEN);
-  localStorage.setItem('bypassAuth', 'true');
-  localStorage.setItem('bypassProfile', JSON.stringify(USER_TEST_BASIC_BYPASS_USER));
-  persistAuthenticatedUser(USER_TEST_BASIC_BYPASS_USER);
-  persistAuthLock(USER_TEST_BASIC_BYPASS_USER, USER_TEST_BASIC_BYPASS_TOKEN);
-  localStorage.removeItem('registeredEmail');
-  return { ok: true };
-}
-
-function startPremiumTestBypass() {
-  const enteredCode = requestAdminBypassCode(
-    'Enter PREMIUM ACC premium user bypass code:',
-    'PREMIUM ACC premium user',
-    PREMIUM_TEST_BYPASS_CODE
-  );
-  if (!enteredCode) {
-    return { ok: false, reason: 'cancelled' };
-  }
-
-  if (enteredCode !== PREMIUM_TEST_BYPASS_CODE) {
-    return { ok: false, reason: 'invalid' };
-  }
-
-  localStorage.setItem('authToken', PREMIUM_TEST_BYPASS_TOKEN);
-  localStorage.setItem('bypassAuth', 'true');
-  localStorage.setItem('bypassProfile', JSON.stringify(PREMIUM_TEST_BYPASS_USER));
-  persistAuthenticatedUser(PREMIUM_TEST_BYPASS_USER);
-  persistAuthLock(PREMIUM_TEST_BYPASS_USER, PREMIUM_TEST_BYPASS_TOKEN);
-  localStorage.removeItem('registeredEmail');
-  return { ok: true };
-}
-
 // Login handler script
 document.addEventListener('DOMContentLoaded', function() {
   const loginThemeSwitchButton = document.getElementById('login-theme-switch');
@@ -673,10 +528,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const termsAcceptCheckbox = document.getElementById('terms-accept-checkbox');
   const termsModal = document.getElementById('terms-modal');
   const termsContinueBtn = document.getElementById('terms-continue-btn');
-  const isaacAdminBypassLink = document.getElementById('isaac-admin-bypass-link');
-  const steveAdminBypassLink = document.getElementById('steve-admin-bypass-link');
-  const userTestBasicBypassLink = document.getElementById('user-test-basic-bypass-link');
-  const premiumTestBypassLink = document.getElementById('premium-test-bypass-link');
   const firstTermsFocusable = document.querySelector('.terms-consent-scroll');
   let pendingTwoFactorChallenge = '';
 
@@ -925,66 +776,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  if (isaacAdminBypassLink) {
-    isaacAdminBypassLink.addEventListener('click', function() {
-      clearLoginError();
-      const bypassResult = startIsaacAdminBypass();
-      if (!bypassResult.ok) {
-        if (bypassResult.reason === 'invalid') {
-          showLoginError('Invalid Isaac admin bypass code.');
-        }
-        return;
-      }
-
-      window.location.href = '/dashboard.html';
-    });
-  }
-
-  if (steveAdminBypassLink) {
-    steveAdminBypassLink.addEventListener('click', function() {
-      clearLoginError();
-      const bypassResult = startSteveAdminBypass();
-      if (!bypassResult.ok) {
-        if (bypassResult.reason === 'invalid') {
-          showLoginError('Invalid Steve admin bypass code.');
-        }
-        return;
-      }
-
-      window.location.href = '/dashboard.html';
-    });
-  }
-
-  if (userTestBasicBypassLink) {
-    userTestBasicBypassLink.addEventListener('click', function() {
-      clearLoginError();
-      const bypassResult = startUserTestBasicBypass();
-      if (!bypassResult.ok) {
-        if (bypassResult.reason === 'invalid') {
-          showLoginError('Invalid USER TEST ACC basic user bypass code.');
-        }
-        return;
-      }
-
-      window.location.href = '/dashboard.html';
-    });
-  }
-
-  if (premiumTestBypassLink) {
-    premiumTestBypassLink.addEventListener('click', function() {
-      clearLoginError();
-      const bypassResult = startPremiumTestBypass();
-      if (!bypassResult.ok) {
-        if (bypassResult.reason === 'invalid') {
-          showLoginError('Invalid PREMIUM ACC premium user bypass code.');
-        }
-        return;
-      }
-
-      window.location.href = '/dashboard.html';
-    });
-  }
-
   if (termsAcceptCheckbox) {
     termsAcceptCheckbox.checked = false;
     termsAcceptCheckbox.addEventListener('change', function() {
@@ -1197,12 +988,6 @@ async function completeOauthSignIn(token, errorDiv) {
 // Check authentication status
 async function checkAuthStatus() {
   const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-  const bypassEnabled = localStorage.getItem('bypassAuth') === 'true';
-  if (bypassEnabled && window.location.pathname === '/login.html') {
-    window.location.href = '/dashboard.html';
-    return;
-  }
-
   if (!token || window.location.pathname !== '/login.html') {
     return;
   }

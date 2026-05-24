@@ -111,6 +111,15 @@
     <style>
         .employee-sheet-wrap {
             padding: 28px;
+            --employee-sheet-surface: linear-gradient(145deg, rgba(var(--accent-rgb, 5, 150, 105), 0.12), var(--glass-bg));
+            --employee-sheet-border: rgba(var(--accent-light-rgb, 52, 211, 153), 0.22);
+            --employee-sheet-head-bg: linear-gradient(135deg, rgba(var(--accent-rgb, 5, 150, 105), 0.22), rgba(15, 23, 42, 0.18));
+            --employee-sheet-head-text: var(--text-secondary);
+            --employee-sheet-row-alt: rgba(var(--accent-rgb, 5, 150, 105), 0.05);
+            --employee-sheet-select-bg: rgba(15, 23, 42, 0.18);
+            --employee-sheet-select-border: rgba(var(--accent-light-rgb, 52, 211, 153), 0.24);
+            --employee-sheet-scroll-thumb: rgba(var(--accent-light-rgb, 52, 211, 153), 0.5);
+            --employee-sheet-scroll-track: rgba(255, 255, 255, 0.08);
         }
 
         .employee-sheet-card {
@@ -150,9 +159,26 @@
         .employee-sheet-table-wrap {
             overflow: auto;
             border-radius: 22px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            background: rgba(7, 14, 24, 0.34);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--employee-sheet-border);
+            background: var(--employee-sheet-surface);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 42px -28px var(--glass-shadow);
+        }
+
+        .employee-sheet-table-wrap::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        .employee-sheet-table-wrap::-webkit-scrollbar-thumb {
+            background: var(--employee-sheet-scroll-thumb);
+            border-radius: 999px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .employee-sheet-table-wrap::-webkit-scrollbar-track {
+            background: var(--employee-sheet-scroll-track);
+            border-radius: 999px;
         }
 
         .employee-sheet-table {
@@ -170,21 +196,22 @@
             font-size: 12px;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: rgba(226, 232, 240, 0.8);
-            background: rgba(15, 23, 42, 0.92);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--employee-sheet-head-text);
+            background: var(--employee-sheet-head-bg);
+            border-bottom: 1px solid var(--employee-sheet-border);
+            backdrop-filter: blur(14px);
         }
 
         .employee-sheet-table tbody td {
             padding: 14px 16px;
             vertical-align: top;
             color: var(--text-primary);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(var(--accent-light-rgb, 52, 211, 153), 0.14);
             min-width: 140px;
         }
 
         .employee-sheet-table tbody tr:nth-child(even) td {
-            background: rgba(148, 163, 184, 0.03);
+            background: var(--employee-sheet-row-alt);
         }
 
         .employee-sheet-table td[contenteditable="true"] {
@@ -205,9 +232,9 @@
         .employee-sheet-status-select {
             width: 100%;
             min-height: 42px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid var(--employee-sheet-select-border);
             border-radius: 14px;
-            background: rgba(15, 23, 42, 0.9);
+            background: var(--employee-sheet-select-bg);
             color: var(--text-primary);
             padding: 10px 12px;
             font: inherit;
@@ -215,6 +242,7 @@
             letter-spacing: 0.02em;
             outline: none;
             transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+            backdrop-filter: blur(14px);
         }
 
         .employee-sheet-status-select:focus {
@@ -241,6 +269,16 @@
         .employee-sheet-status-select.is-terminated {
             color: #fff1f2;
             background: rgba(220, 38, 38, 0.92);
+        }
+
+        [data-theme="light"] .employee-sheet-wrap,
+        [data-theme="beach"] .employee-sheet-wrap,
+        [data-theme="cloud"] .employee-sheet-wrap {
+            --employee-sheet-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(var(--accent-light-rgb, 52, 211, 153), 0.12));
+            --employee-sheet-head-bg: linear-gradient(135deg, rgba(var(--accent-rgb, 5, 150, 105), 0.16), rgba(255, 255, 255, 0.78));
+            --employee-sheet-row-alt: rgba(var(--accent-rgb, 5, 150, 105), 0.07);
+            --employee-sheet-select-bg: rgba(255, 255, 255, 0.72);
+            --employee-sheet-scroll-track: rgba(15, 23, 42, 0.06);
         }
 
         .employee-sheet-note {
@@ -403,6 +441,7 @@
             let pendingPollPromise = null;
             let isDirty = false;
             let pollingHandle = null;
+            let verifiedAdminUser = null;
 
             const CSV_HEADERS = [
                 'Employment Status',
@@ -445,37 +484,19 @@
             }
 
             function getAuthToken() {
-                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-            }
-
-            function decodeJwtPayload(token) {
-                const parts = String(token || '').split('.');
-                if (parts.length < 2) {
-                    return null;
-                }
-                try {
-                    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-                    return JSON.parse(atob(base64));
-                } catch (error) {
-                    return null;
-                }
+                return String((typeof window.getAuthToken === 'function' ? window.getAuthToken() : '') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             }
 
             function getCurrentAdmin() {
-                const token = getAuthToken();
-                const decoded = decodeJwtPayload(token) || {};
-                const storedUser = getStoredUser();
-                const role = String(storedUser.role || decoded.role || '').trim().toLowerCase();
-
-                if (!token || role !== 'admin') {
+                if (!verifiedAdminUser) {
                     return null;
                 }
 
                 return {
-                    id: decoded.id || storedUser.id || null,
-                    name: String(storedUser.name || decoded.name || 'Admin').trim(),
-                    email: String(storedUser.email || decoded.email || '').trim().toLowerCase(),
-                    role
+                    id: verifiedAdminUser.id || null,
+                    name: String(verifiedAdminUser.name || 'Admin').trim(),
+                    email: String(verifiedAdminUser.email || '').trim().toLowerCase(),
+                    role: 'admin'
                 };
             }
 
@@ -746,8 +767,17 @@
                     body: JSON.stringify({ rows })
                 }).then((payload) => {
                     const sheet = payload && payload.sheet ? payload.sheet : { rows, revision: currentRevision };
+                    const serverSignature = getRowSignature(Array.isArray(sheet.rows) ? sheet.rows : rows);
                     isDirty = false;
-                    applySheet(sheet, { force: currentSignature !== lastAppliedSignature });
+
+                    if (serverSignature === currentSignature) {
+                        currentRevision = Math.max(0, Number(sheet && sheet.revision) || 0);
+                        updateLastEditedMeta(sheet);
+                        lastAppliedSignature = serverSignature;
+                    } else {
+                        applySheet(sheet, { force: true });
+                    }
+
                     setSyncStatus('All admin sessions are up to date.', 'info');
                     return sheet;
                 }).catch((error) => {
@@ -809,69 +839,100 @@
                 return pendingPollPromise;
             }
 
-            if (!getCurrentAdmin()) {
+            async function ensureCurrentAdminSession() {
+                const sessionUser = typeof window.loadCurrentSessionUser === 'function'
+                    ? await window.loadCurrentSessionUser().catch(() => null)
+                    : null;
+
+                const activeUser = sessionUser || null;
+                if (!activeUser || String(activeUser.role || '').trim().toLowerCase() !== 'admin') {
+                    verifiedAdminUser = null;
+                    redirectUnauthorized();
+                    return null;
+                }
+
+                verifiedAdminUser = {
+                    id: activeUser.id || null,
+                    name: String(activeUser.name || 'Admin').trim(),
+                    email: String(activeUser.email || '').trim().toLowerCase(),
+                    role: 'admin'
+                };
+
+                return activeUser;
+            }
+
+            const boot = async () => {
+                const activeAdmin = await ensureCurrentAdminSession();
+                if (!activeAdmin) {
+                    return;
+                }
+
+                renderRows([]);
+                lastAppliedSignature = getRowSignature(getRowsFromDom());
+                setSyncStatus('Syncing shared admin sheet...', 'info');
+
+                addRowBtn.addEventListener('click', () => {
+                    const newRow = createRow({ employmentStatus: 'ACTIVE' });
+                    body.appendChild(newRow);
+                    scheduleSaveRows();
+                    const editableCells = newRow.querySelectorAll('td');
+                    if (editableCells[1] && typeof editableCells[1].focus === 'function') {
+                        editableCells[1].focus();
+                    }
+                });
+
+                saveCsvBtn.addEventListener('click', async () => {
+                    if (pendingSaveTimer) {
+                        window.clearTimeout(pendingSaveTimer);
+                        pendingSaveTimer = null;
+                    }
+
+                    try {
+                        await saveRowsToServer();
+                    } catch (error) {
+                        return;
+                    }
+
+                    const rows = getRowsFromDom();
+                    downloadCsvFile(buildCsvFromRows(rows));
+                    if (typeof window.showDashboardToast === 'function') {
+                        window.showDashboardToast('success', 'CSV Saved', `${rows.length} employee row${rows.length === 1 ? '' : 's'} exported.`);
+                    }
+                });
+
+                void loadRowsFromServer({ force: true });
+
+                pollingHandle = window.setInterval(() => {
+                    void loadRowsFromServer({ force: false });
+                }, 3000);
+
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        void loadRowsFromServer({ force: false });
+                    }
+                });
+
+                window.addEventListener('beforeunload', () => {
+                    if (pendingSaveTimer) {
+                        window.clearTimeout(pendingSaveTimer);
+                        pendingSaveTimer = null;
+                    }
+                });
+
+                window.addEventListener('pagehide', () => {
+                    if (pollingHandle) {
+                        window.clearInterval(pollingHandle);
+                        pollingHandle = null;
+                    }
+                });
+            };
+
+            if (!getAuthToken()) {
                 redirectUnauthorized();
                 return;
             }
 
-            renderRows([]);
-            lastAppliedSignature = getRowSignature(getRowsFromDom());
-            setSyncStatus('Syncing shared admin sheet...', 'info');
-
-            addRowBtn.addEventListener('click', () => {
-                const newRow = createRow({ employmentStatus: 'ACTIVE' });
-                body.appendChild(newRow);
-                scheduleSaveRows();
-                const editableCells = newRow.querySelectorAll('td');
-                if (editableCells[1] && typeof editableCells[1].focus === 'function') {
-                    editableCells[1].focus();
-                }
-            });
-
-            saveCsvBtn.addEventListener('click', async () => {
-                if (pendingSaveTimer) {
-                    window.clearTimeout(pendingSaveTimer);
-                    pendingSaveTimer = null;
-                }
-
-                try {
-                    await saveRowsToServer();
-                } catch (error) {
-                    return;
-                }
-
-                const rows = getRowsFromDom();
-                downloadCsvFile(buildCsvFromRows(rows));
-                if (typeof window.showDashboardToast === 'function') {
-                    window.showDashboardToast('success', 'CSV Saved', `${rows.length} employee row${rows.length === 1 ? '' : 's'} exported.`);
-                }
-            });
-
-            void loadRowsFromServer({ force: true });
-
-            pollingHandle = window.setInterval(() => {
-                void loadRowsFromServer({ force: false });
-            }, 3000);
-
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') {
-                    void loadRowsFromServer({ force: false });
-                }
-            });
-
-            window.addEventListener('beforeunload', () => {
-                if (pendingSaveTimer) {
-                    window.clearTimeout(pendingSaveTimer);
-                    pendingSaveTimer = null;
-                }
-            });
-
-            window.addEventListener('pagehide', () => {
-                if (pollingHandle) {
-                    window.clearInterval(pollingHandle);
-                    pollingHandle = null;
-                }
-            });
+            void boot();
         })();
     </script>
 </body>

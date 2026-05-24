@@ -7,3 +7,4 @@
 - Reuse existing endpoints, storage helpers, and theme utilities before adding new abstractions.
 - Treat this repository as a mixed web and desktop app: browser-facing pages live at the workspace root, server logic is primarily in `server.js`, and desktop shell code lives in `electron/`.
 - When editing authentication, storage, or admin flows, avoid weakening existing checks and prefer minimal behavioral changes.
+- Treat the My Agents workspace page and its search/filter implementation in `my-agents.html` as production-stable and immutable unless the user explicitly instructs otherwise. Do not modify, refactor, rename, remove, or alter that protected block without direct permission.

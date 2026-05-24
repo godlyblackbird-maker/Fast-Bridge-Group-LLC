@@ -15,6 +15,13 @@ const { execFile } = require('child_process');
 const { recoverTwilioInbox } = require('./scripts/recover-twilio-inbox');
 const { createWorker, OEM } = require('tesseract.js');
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const {
+  findBuiltInBypassDefaultTokenEnvWarnings,
+  parseBuiltInBypassAllowedIps,
+  parseBuiltInBypassTokenValues,
+  resolveBuiltInBypassAuth
+} = require('./built-in-bypass-auth');
+const { mergeTwilioInboxConversations } = require('./twilio-inbox-conversations');
 
 let PostgresPool = null;
 try {
@@ -323,10 +330,13 @@ const userUploadMemory = multer({
 
 const CANONICAL_ISAAC_EMAIL = 'isaac.haro@fastbridgegroupllc.com';
 const CANONICAL_STEVE_EMAIL = 'steve.medina@fastbridgegroupllc.com';
-const ISAAC_ADMIN_BYPASS_TOKEN = 'isaacAdminBypassToken';
-const STEVE_ADMIN_BYPASS_TOKEN = 'steveAdminBypassToken';
-const USER_TEST_BASIC_BYPASS_TOKEN = 'userTestBasicBypassToken';
-const PREMIUM_TEST_BYPASS_TOKEN = 'premiumTestBypassToken';
+const ISAAC_ADMIN_BYPASS_TOKEN = getFirstConfiguredEnvValue('ISAAC_ADMIN_BYPASS_TOKEN') || 'isaacAdminBypassToken';
+const STEVE_ADMIN_BYPASS_TOKEN = getFirstConfiguredEnvValue('STEVE_ADMIN_BYPASS_TOKEN') || 'steveAdminBypassToken';
+const USER_TEST_BASIC_BYPASS_TOKEN = getFirstConfiguredEnvValue('USER_TEST_BASIC_BYPASS_TOKEN') || 'userTestBasicBypassToken';
+const PREMIUM_TEST_BYPASS_TOKEN = getFirstConfiguredEnvValue('PREMIUM_TEST_BYPASS_TOKEN') || 'premiumTestBypassToken';
+const BUILT_IN_BYPASS_AUTH_ENABLED = !/^(0|false|off|no)$/i.test(String(getFirstConfiguredEnvValue('BUILT_IN_BYPASS_AUTH_ENABLED', 'BYPASS_AUTH_ENABLED') || 'true').trim());
+const BUILT_IN_BYPASS_ALLOWED_IPS = parseBuiltInBypassAllowedIps(getFirstConfiguredEnvValue('BUILT_IN_BYPASS_ALLOWED_IPS', 'BYPASS_AUTH_ALLOWED_IPS') || '');
+const BUILT_IN_BYPASS_AUDIT_THROTTLE_MS = Math.max(0, Number.parseInt(String(getFirstConfiguredEnvValue('BUILT_IN_BYPASS_AUDIT_THROTTLE_MS') || '60000'), 10) || 60000);
 const CANONICAL_STEVE_PASSWORD = 'stevemedina';
 const DEFAULT_TWILIO_NUMBER_ASSIGNMENTS = Object.freeze([
   Object.freeze({
@@ -377,6 +387,8 @@ const ADMIN_CANONICAL_EMAILS = new Set([
   CANONICAL_STEVE_EMAIL
 ]);
 const builtInBypassAuthUsersByToken = new Map();
+const builtInBypassAuthTokenLabelsByToken = new Map();
+const recentBuiltInBypassAuditByKey = new Map();
 
 function getFirstConfiguredEnvValue(...names) {
   for (const name of names) {
@@ -5011,15 +5023,77 @@ async function getAuthenticatedUserFromBearerHeader(authHeader) {
   }
 }
 
+function getTwilioOwnerEmailForMessageRecord(record) {
+  const normalizedOwnerEmail = normalizeKnownEmail(record?.ownerEmail || '');
+  const payload = record && typeof record.rawPayload === 'object' ? record.rawPayload : {};
+  const assignedOwnerEmail = normalizeKnownEmail(getAssignedTwilioOwnerEmailForPayload({
+    ...payload,
+    platformIdentity: record?.platformIdentity || payload.platformIdentity || '',
+    twilioNumber: payload.twilioNumber || '',
+    from: payload.from || '',
+    to: payload.to || ''
+  }));
+
+  return assignedOwnerEmail || normalizedOwnerEmail;
+}
+
+async function resolveCanonicalTwilioConversationKey(record) {
+  const normalizedContactPhone = normalizeSmsPhone(record?.contactPhone);
+  const preferredConversationKey = String(record?.conversationKey || '').trim();
+  if (!normalizedContactPhone) {
+    return preferredConversationKey;
+  }
+
+  const targetOwnerEmail = getTwilioOwnerEmailForMessageRecord(record);
+  const rows = await dbAll(
+    `SELECT conversation_key,
+            owner_email,
+            raw_payload_json,
+            updated_at,
+            created_at,
+            id
+       FROM twilio_inbox_messages
+      WHERE contact_phone = ?
+      ORDER BY datetime(updated_at) DESC, datetime(created_at) DESC, id DESC`,
+    [normalizedContactPhone]
+  );
+
+  if (!Array.isArray(rows) || !rows.length) {
+    return preferredConversationKey;
+  }
+
+  const matchingRow = targetOwnerEmail
+    ? rows.find((row) => {
+        const assignedOwnerEmail = normalizeKnownEmail(getAssignedTwilioOwnerEmailForNumber(extractTwilioInboxNumber(row)) || '');
+        const rowOwnerEmail = normalizeKnownEmail(row?.owner_email || '');
+        return assignedOwnerEmail === targetOwnerEmail || rowOwnerEmail === targetOwnerEmail;
+      })
+    : null;
+
+  if (matchingRow && String(matchingRow.conversation_key || '').trim()) {
+    return String(matchingRow.conversation_key || '').trim();
+  }
+
+  if (preferredConversationKey && rows.some((row) => String(row?.conversation_key || '').trim() === preferredConversationKey)) {
+    return preferredConversationKey;
+  }
+
+  return String(rows[0]?.conversation_key || '').trim() || preferredConversationKey;
+}
+
 async function upsertTwilioInboxMessage(record) {
   if (!record || typeof record !== 'object') {
     return null;
   }
 
   const messageSid = String(record.messageSid || '').trim();
-  const conversationKey = String(record.conversationKey || '').trim();
   const contactPhone = normalizeSmsPhone(record.contactPhone);
   const platformIdentity = normalizeTwilioPlatformIdentity(record.platformIdentity);
+  const conversationKey = await resolveCanonicalTwilioConversationKey({
+    ...record,
+    contactPhone,
+    platformIdentity
+  });
   const createdAt = normalizeApiTimestamp(record.createdAt) || new Date().toISOString();
   const updatedAt = normalizeApiTimestamp(record.updatedAt) || createdAt;
   const readAt = normalizeApiTimestamp(record.readAt);
@@ -7582,6 +7656,30 @@ function initializeDatabase() {
   });
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS bypass_auth_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      email TEXT,
+      token_label TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      request_method TEXT,
+      request_path TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating bypass_auth_audit table:', err);
+    } else {
+      console.log('Bypass auth audit table ready');
+      db.run('CREATE INDEX IF NOT EXISTS idx_bypass_auth_audit_created_at ON bypass_auth_audit(created_at DESC)', () => {});
+      db.run('CREATE INDEX IF NOT EXISTS idx_bypass_auth_audit_token_label ON bypass_auth_audit(token_label, created_at DESC)', () => {});
+    }
+  });
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS user_uploads (
       id TEXT PRIMARY KEY,
       owner_user_id INTEGER NOT NULL,
@@ -7677,25 +7775,29 @@ function dbGet(sql, params) {
 async function refreshBuiltInBypassAuthUsers() {
   const bypassConfigs = [
     {
-      token: ISAAC_ADMIN_BYPASS_TOKEN,
+      label: 'isaac-admin',
+      tokens: parseBuiltInBypassTokenValues(ISAAC_ADMIN_BYPASS_TOKEN, 'isaacAdminBypassToken'),
       email: CANONICAL_ISAAC_EMAIL,
       fallbackName: 'Isaac Haro',
       fallbackRole: 'admin'
     },
     {
-      token: STEVE_ADMIN_BYPASS_TOKEN,
+      label: 'steve-admin',
+      tokens: parseBuiltInBypassTokenValues(STEVE_ADMIN_BYPASS_TOKEN, 'steveAdminBypassToken'),
       email: CANONICAL_STEVE_EMAIL,
       fallbackName: 'Steve Medina',
       fallbackRole: 'admin'
     },
     {
-      token: USER_TEST_BASIC_BYPASS_TOKEN,
+      label: 'user-test-basic',
+      tokens: parseBuiltInBypassTokenValues(USER_TEST_BASIC_BYPASS_TOKEN, 'userTestBasicBypassToken'),
       email: CANONICAL_USER_TEST_ACC_EMAIL,
       fallbackName: CANONICAL_USER_TEST_ACC_NAME,
       fallbackRole: 'user'
     },
     {
-      token: PREMIUM_TEST_BYPASS_TOKEN,
+      label: 'premium-test',
+      tokens: parseBuiltInBypassTokenValues(PREMIUM_TEST_BYPASS_TOKEN, 'premiumTestBypassToken'),
       email: CANONICAL_PREMIUM_ACC_EMAIL,
       fallbackName: CANONICAL_PREMIUM_ACC_NAME,
       fallbackRole: PREMIUM_USER_ROLE
@@ -7703,31 +7805,150 @@ async function refreshBuiltInBypassAuthUsers() {
   ];
 
   builtInBypassAuthUsersByToken.clear();
+  builtInBypassAuthTokenLabelsByToken.clear();
 
   await Promise.all(bypassConfigs.map(async (config) => {
     const userRow = await dbGet('SELECT id, name, email, role FROM users WHERE LOWER(email) = ?', [config.email]);
-    if (!userRow) {
+    if (!userRow || !Array.isArray(config.tokens) || !config.tokens.length) {
       return;
     }
 
-    builtInBypassAuthUsersByToken.set(config.token, {
+    const baseUserRecord = {
       id: Number(userRow.id) || 0,
       name: String(userRow.name || config.fallbackName).trim() || config.fallbackName,
       email: String(userRow.email || config.email).trim().toLowerCase() || config.email,
       role: String(userRow.role || config.fallbackRole || 'user').trim().toLowerCase() || String(config.fallbackRole || 'user').trim().toLowerCase() || 'user',
+      tokenLabel: config.label,
       isBypassAuth: true
+    };
+
+    config.tokens.forEach((tokenValue) => {
+      builtInBypassAuthTokenLabelsByToken.set(tokenValue, config.label);
+      builtInBypassAuthUsersByToken.set(tokenValue, { ...baseUserRecord });
     });
   }));
+
+  if (BUILT_IN_BYPASS_AUTH_ENABLED) {
+    const usingDefaultTokens = findBuiltInBypassDefaultTokenEnvWarnings([
+      {
+        envKey: 'ISAAC_ADMIN_BYPASS_TOKEN',
+        configuredValue: ISAAC_ADMIN_BYPASS_TOKEN,
+        defaultToken: 'isaacAdminBypassToken'
+      },
+      {
+        envKey: 'STEVE_ADMIN_BYPASS_TOKEN',
+        configuredValue: STEVE_ADMIN_BYPASS_TOKEN,
+        defaultToken: 'steveAdminBypassToken'
+      },
+      {
+        envKey: 'USER_TEST_BASIC_BYPASS_TOKEN',
+        configuredValue: USER_TEST_BASIC_BYPASS_TOKEN,
+        defaultToken: 'userTestBasicBypassToken'
+      },
+      {
+        envKey: 'PREMIUM_TEST_BYPASS_TOKEN',
+        configuredValue: PREMIUM_TEST_BYPASS_TOKEN,
+        defaultToken: 'premiumTestBypassToken'
+      }
+    ]);
+
+    if (usingDefaultTokens.length) {
+      console.warn('Built-in bypass auth is enabled with default token values. Rotate these with environment variables:', usingDefaultTokens.join(', '));
+    }
+
+    if (!BUILT_IN_BYPASS_ALLOWED_IPS.size) {
+      console.warn('Built-in bypass auth is enabled without an IP allowlist. Set BUILT_IN_BYPASS_ALLOWED_IPS to reduce exposure.');
+    }
+  }
 }
 
-function getBuiltInBypassAuthUserForToken(token) {
+function getBuiltInBypassTokenLabel(token) {
   const normalizedToken = String(token || '').trim();
   if (!normalizedToken) {
     return null;
   }
 
-  const userRecord = builtInBypassAuthUsersByToken.get(normalizedToken);
-  return userRecord ? { ...userRecord } : null;
+  return builtInBypassAuthTokenLabelsByToken.get(normalizedToken) || null;
+}
+
+function isBuiltInBypassIpAllowed(req) {
+  if (!BUILT_IN_BYPASS_ALLOWED_IPS.size) {
+    return true;
+  }
+
+  const ipAddress = String(getClientIp(req) || '').trim();
+  if (!ipAddress) {
+    return false;
+  }
+
+  return BUILT_IN_BYPASS_ALLOWED_IPS.has(ipAddress);
+}
+
+function recordBuiltInBypassAuditEvent(userRecord, req, outcome = 'accepted') {
+  const tokenLabel = String(userRecord?.tokenLabel || '').trim();
+  if (!tokenLabel || !req) {
+    return;
+  }
+
+  const ipAddress = String(getClientIp(req) || '').trim();
+  const requestPath = String(req.originalUrl || req.url || '').trim();
+  const requestMethod = String(req.method || '').trim().toUpperCase();
+  const throttleKey = [tokenLabel, outcome, ipAddress, requestMethod, requestPath].join('|');
+  const now = Date.now();
+  const lastSeenAt = recentBuiltInBypassAuditByKey.get(throttleKey) || 0;
+  if (BUILT_IN_BYPASS_AUDIT_THROTTLE_MS > 0 && now - lastSeenAt < BUILT_IN_BYPASS_AUDIT_THROTTLE_MS) {
+    return;
+  }
+
+  recentBuiltInBypassAuditByKey.set(throttleKey, now);
+  db.run(
+    `INSERT INTO bypass_auth_audit (
+      user_id,
+      email,
+      token_label,
+      outcome,
+      request_method,
+      request_path,
+      ip_address,
+      user_agent
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      Number(userRecord?.id) || null,
+      String(userRecord?.email || '').trim().toLowerCase() || null,
+      tokenLabel,
+      String(outcome || 'accepted').trim().toLowerCase() || 'accepted',
+      requestMethod || null,
+      requestPath || null,
+      ipAddress || null,
+      String(req.headers['user-agent'] || '').slice(0, 255) || null
+    ],
+    (error) => {
+      if (error) {
+        console.error('Failed to record bypass auth audit event:', error);
+      }
+    }
+  );
+}
+
+function getBuiltInBypassAuthUserForToken(token, req) {
+  const decision = resolveBuiltInBypassAuth({
+    token,
+    enabled: BUILT_IN_BYPASS_AUTH_ENABLED,
+    requestIp: req ? getClientIp(req) : '',
+    allowedIps: BUILT_IN_BYPASS_ALLOWED_IPS,
+    userByToken: builtInBypassAuthUsersByToken,
+    tokenLabelByToken: builtInBypassAuthTokenLabelsByToken
+  });
+
+  if (req && decision.tokenLabel && ['accepted', 'blocked-disabled', 'blocked-ip'].includes(decision.outcome)) {
+    recordBuiltInBypassAuditEvent(
+      decision.user || { tokenLabel: decision.tokenLabel },
+      req,
+      decision.outcome
+    );
+  }
+
+  return decision.user;
 }
 
 function normalizeMlsImportSpreadsheetValue(value) {
@@ -16518,6 +16739,35 @@ app.post('/api/register', (req, res) => {
   return res.status(403).json({ error: 'Public registration is disabled. Contact an admin.' });
 });
 
+app.get('/api/me', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+
+  try {
+    const userId = Number(decoded.id) || 0;
+    if (userId > 0) {
+      const userRow = await dbGet(
+        'SELECT id, name, email, role, avatar_upload_id FROM users WHERE id = ? LIMIT 1',
+        [userId]
+      );
+
+      if (userRow) {
+        return res.json({ success: true, user: serializeUser(userRow) });
+      }
+    }
+
+    return res.json({ success: true, user: serializeUser(decoded) });
+  } catch (error) {
+    console.error('Current session user load error:', error);
+    return res.status(500).json({ error: 'Unable to load the current user.' });
+  }
+});
+
 app.get('/api/feature-access', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
@@ -16625,6 +16875,69 @@ app.put('/api/admin/feature-access', async (req, res) => {
   } catch (error) {
     console.error('Admin feature access save error:', error);
     return res.status(500).json({ error: 'Unable to save feature access settings.' });
+  }
+});
+
+app.get('/api/admin/bypass-auth-audit', async (req, res) => {
+  const decoded = requireAdmin(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const requestedLimit = Number.parseInt(String(req.query?.limit || ''), 10);
+  const limit = Math.min(Math.max(requestedLimit || 25, 1), 100);
+
+  try {
+    const recentEvents = await dbAll(
+      `SELECT id, user_id, email, token_label, outcome, request_method, request_path, ip_address, user_agent, created_at
+         FROM bypass_auth_audit
+        ORDER BY datetime(created_at) DESC, id DESC
+        LIMIT ?`,
+      [limit]
+    );
+
+    const summaryRows = await dbAll(
+      `SELECT token_label, outcome, COUNT(*) AS total, MAX(created_at) AS last_seen_at
+         FROM bypass_auth_audit
+        GROUP BY token_label, outcome
+        ORDER BY token_label ASC, outcome ASC`
+    );
+
+    return res.json({
+      success: true,
+      bypassAuth: {
+        enabled: BUILT_IN_BYPASS_AUTH_ENABLED,
+        ipAllowlistConfigured: BUILT_IN_BYPASS_ALLOWED_IPS.size > 0,
+        allowedIps: Array.from(BUILT_IN_BYPASS_ALLOWED_IPS),
+        auditThrottleMs: BUILT_IN_BYPASS_AUDIT_THROTTLE_MS,
+        configuredUsers: Array.from(builtInBypassAuthUsersByToken.values()).map((userRecord) => ({
+          email: String(userRecord?.email || '').trim().toLowerCase(),
+          role: String(userRecord?.role || '').trim().toLowerCase(),
+          tokenLabel: String(userRecord?.tokenLabel || '').trim()
+        })),
+        recentEvents: recentEvents.map((row) => ({
+          id: Number(row.id) || 0,
+          userId: Number(row.user_id) || 0,
+          email: String(row.email || '').trim().toLowerCase(),
+          tokenLabel: String(row.token_label || '').trim(),
+          outcome: String(row.outcome || '').trim().toLowerCase(),
+          requestMethod: String(row.request_method || '').trim().toUpperCase(),
+          requestPath: String(row.request_path || '').trim(),
+          ipAddress: String(row.ip_address || '').trim(),
+          userAgent: String(row.user_agent || '').trim(),
+          createdAt: String(row.created_at || '').trim()
+        })),
+        summary: summaryRows.map((row) => ({
+          tokenLabel: String(row.token_label || '').trim(),
+          outcome: String(row.outcome || '').trim().toLowerCase(),
+          total: Math.max(0, Number(row.total) || 0),
+          lastSeenAt: String(row.last_seen_at || '').trim()
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Admin bypass auth audit load error:', error);
+    return res.status(500).json({ error: 'Unable to load bypass auth audit data.' });
   }
 });
 
@@ -17385,7 +17698,7 @@ function requireAuth(req, res) {
     return null;
   }
 
-  const bypassUser = getBuiltInBypassAuthUserForToken(token);
+  const bypassUser = getBuiltInBypassAuthUserForToken(token, req);
   if (bypassUser) {
     return bypassUser;
   }
@@ -17432,8 +17745,7 @@ function verifyAuthTokenValue(token) {
 
 function requireAssetAuth(req, res) {
   const headerToken = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  const queryToken = String(req.query?.token || '').trim();
-  const decoded = verifyAuthTokenValue(headerToken || queryToken);
+  const decoded = verifyAuthTokenValue(headerToken);
   if (!decoded) {
     res.status(401).json({ error: 'Not authenticated' });
     return null;
@@ -24917,47 +25229,21 @@ app.get('/api/twilio/inbox/conversations', async (req, res) => {
       };
     }))).filter(Boolean);
 
-    const mergedConversationMap = new Map();
-    accessibleConversations.forEach((conversation) => {
-      const mergeKey = `${String(conversation.contactPhone || '').trim()}::${String(conversation.ownerEmail || '').trim().toLowerCase()}`;
-      const existing = mergedConversationMap.get(mergeKey);
-      if (!existing) {
-        mergedConversationMap.set(mergeKey, {
-          ...conversation,
-          searchText: String(conversation.searchText || '').trim()
-        });
-        return;
-      }
+    const mergedInboxResult = mergeTwilioInboxConversations(accessibleConversations.map((conversation) => ({
+      ...conversation,
+      contactPhone: normalizeSmsPhone(conversation.contactPhone) || String(conversation.contactPhone || '').trim()
+    })));
 
-      const existingTime = Date.parse(String(existing.lastMessageAt || '')) || 0;
-      const nextTime = Date.parse(String(conversation.lastMessageAt || '')) || 0;
-      const preferredConversation = nextTime >= existingTime ? conversation : existing;
-
-      mergedConversationMap.set(mergeKey, {
-        ...existing,
-        ...preferredConversation,
-        unreadCount: Math.max(0, Number(existing.unreadCount) || 0) + Math.max(0, Number(conversation.unreadCount) || 0),
-        hasInboundReplies: Boolean(existing.hasInboundReplies || conversation.hasInboundReplies),
-        isBlocked: Boolean(existing.isBlocked || conversation.isBlocked),
-        searchText: [existing.searchText, conversation.searchText].filter(Boolean).join(' ').trim()
-      });
-    });
-
-    const conversations = Array.from(mergedConversationMap.values())
+    const conversations = mergedInboxResult.conversations
       .map((conversation) => {
         const { ownerEmail, ...rest } = conversation;
         return rest;
-      })
-      .sort((left, right) => {
-        const rightTime = Date.parse(String(right.lastMessageAt || '')) || 0;
-        const leftTime = Date.parse(String(left.lastMessageAt || '')) || 0;
-        if (rightTime !== leftTime) {
-          return rightTime - leftTime;
-        }
-        return String(left.contactName || '').localeCompare(String(right.contactName || ''), undefined, { sensitivity: 'base' });
       });
 
-    return res.json({ conversations });
+    return res.json({
+      conversations,
+      debug: mergedInboxResult.debug
+    });
   } catch (error) {
     console.error('Failed to load Twilio inbox conversations:', error);
     return res.status(500).json({ error: 'Unable to load Twilio inbox conversations.' });

@@ -84,6 +84,28 @@ SQLITE_BACKUP_S3_PREFIX=database-backups/sqlite
 # SQLITE_BACKUP_STARTUP_DELAY_MS=120000
 ```
 
+Built-in bypass auth rollout without wiping browser memory:
+
+```env
+# Keep bypass enabled only if you intentionally use it.
+BUILT_IN_BYPASS_AUTH_ENABLED=true
+
+# Restrict bypass to trusted public IPs or proxy-forwarded client IPs.
+BUILT_IN_BYPASS_ALLOWED_IPS=203.0.113.10,198.51.100.24
+
+# For a safe token rotation, set the new token first and keep the old token
+# after a comma during the transition window. Remove the old token after
+# active bypass sessions have moved over.
+ISAAC_ADMIN_BYPASS_TOKEN=new-token,old-token
+STEVE_ADMIN_BYPASS_TOKEN=new-token,old-token
+USER_TEST_BASIC_BYPASS_TOKEN=new-token,old-token
+PREMIUM_TEST_BYPASS_TOKEN=new-token,old-token
+```
+
+Admin runtime verification for bypass auth:
+- Call `/api/admin/bypass-auth-audit` while signed in as an admin to inspect current bypass configuration, recent bypass usage, and blocked bypass attempts.
+- After the transition window, remove the old token values from the comma-separated env vars so only the rotated token remains accepted.
+
 ### 3️⃣ Open Dashboard
 ```
 http://localhost:3000

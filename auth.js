@@ -2056,12 +2056,21 @@
     }
 
     try {
-      const response = await fetch('/api/verify', {
-        method: 'POST',
+      let response = await fetch('/api/me', {
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
+
+      if (!response.ok && response.status !== 401) {
+        response = await fetch('/api/verify', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      }
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -2845,6 +2854,10 @@
   // Get current user
   window.getCurrentUser = function() {
     return readStoredUser();
+  };
+
+  window.loadCurrentSessionUser = function() {
+    return syncAuthenticatedUser();
   };
 
   window.writeStoredUserIdentity = function(userLike) {

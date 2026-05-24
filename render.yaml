@@ -24,6 +24,20 @@ services:
         value: true
       - key: JWT_SECRET
         sync: false
+      - key: ISAAC_ADMIN_BYPASS_TOKEN
+        sync: false
+      - key: STEVE_ADMIN_BYPASS_TOKEN
+        sync: false
+      - key: USER_TEST_BASIC_BYPASS_TOKEN
+        sync: false
+      - key: PREMIUM_TEST_BYPASS_TOKEN
+        sync: false
+      - key: BUILT_IN_BYPASS_AUTH_ENABLED
+        value: true
+      - key: BUILT_IN_BYPASS_ALLOWED_IPS
+        sync: false
+      - key: BUILT_IN_BYPASS_AUDIT_THROTTLE_MS
+        value: 60000
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL

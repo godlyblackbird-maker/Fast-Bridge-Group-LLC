@@ -1413,6 +1413,7 @@
             let pendingPollPromise = null;
             let isDirty = false;
             let pollingHandle = null;
+            let verifiedAdminUser = null;
             let buyersCoverageMapInstance = null;
             let buyersCoverageInfoWindow = null;
             let buyersCoverageMapRenderToken = 0;
@@ -1462,38 +1463,19 @@
             }
 
             function getAuthToken() {
-                return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-            }
-
-            function decodeJwtPayload(token) {
-                const parts = String(token || '').split('.');
-                if (parts.length < 2) {
-                    return null;
-                }
-
-                try {
-                    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-                    return JSON.parse(atob(base64));
-                } catch (error) {
-                    return null;
-                }
+                return String((typeof window.getAuthToken === 'function' ? window.getAuthToken() : '') || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             }
 
             function getCurrentAdmin() {
-                const token = getAuthToken();
-                const decoded = decodeJwtPayload(token) || {};
-                const storedUser = getStoredUser();
-                const role = String(storedUser.role || decoded.role || '').trim().toLowerCase();
-
-                if (!token || role !== 'admin') {
+                if (!verifiedAdminUser) {
                     return null;
                 }
 
                 return {
-                    id: decoded.id || storedUser.id || null,
-                    name: String(storedUser.name || decoded.name || 'Admin').trim(),
-                    email: String(storedUser.email || decoded.email || '').trim().toLowerCase(),
-                    role
+                    id: verifiedAdminUser.id || null,
+                    name: String(verifiedAdminUser.name || 'Admin').trim(),
+                    email: String(verifiedAdminUser.email || '').trim().toLowerCase(),
+                    role: 'admin'
                 };
             }
 
@@ -2713,76 +2695,107 @@
                 return pendingPollPromise;
             }
 
-            if (!getCurrentAdmin()) {
+            async function ensureCurrentAdminSession() {
+                const sessionUser = typeof window.loadCurrentSessionUser === 'function'
+                    ? await window.loadCurrentSessionUser().catch(() => null)
+                    : null;
+
+                const activeUser = sessionUser || null;
+                if (!activeUser || String(activeUser.role || '').trim().toLowerCase() !== 'admin') {
+                    verifiedAdminUser = null;
+                    redirectUnauthorized();
+                    return null;
+                }
+
+                verifiedAdminUser = {
+                    id: activeUser.id || null,
+                    name: String(activeUser.name || 'Admin').trim(),
+                    email: String(activeUser.email || '').trim().toLowerCase(),
+                    role: 'admin'
+                };
+
+                return activeUser;
+            }
+
+            const boot = async function () {
+                const activeAdmin = await ensureCurrentAdminSession();
+                if (!activeAdmin) {
+                    return;
+                }
+
+                renderRows(getInitialRowsFallback());
+                lastAppliedSignature = getRowSignature(getRowsFromDom());
+                setSyncStatus('Syncing shared admin sheet...', 'info');
+                void getCaliforniaCityZipLookup().then(() => {
+                    return getCaliforniaCountyZipLookup();
+                }).then(() => {
+                    scheduleBuyerCoverageMapRender(getRowsFromDom());
+                }).catch(() => null);
+
+                addRowBtn.addEventListener('click', function () {
+                    const newRow = createRow({ activeBuyer: 'BUYER' });
+                    body.appendChild(newRow);
+                    scheduleSaveRows();
+
+                    const editableCells = newRow.querySelectorAll('td');
+                    if (editableCells[1] && typeof editableCells[1].focus === 'function') {
+                        editableCells[1].focus();
+                    }
+                });
+
+                saveCsvBtn.addEventListener('click', async function () {
+                    if (pendingSaveTimer) {
+                        window.clearTimeout(pendingSaveTimer);
+                        pendingSaveTimer = null;
+                    }
+
+                    try {
+                        await saveRowsToServer();
+                    } catch (error) {
+                        return;
+                    }
+
+                    const rows = getRowsFromDom();
+                    const csvText = buildCsvFromRows(rows);
+                    downloadCsvFile(csvText);
+                    if (typeof window.showDashboardToast === 'function') {
+                        window.showDashboardToast('success', 'CSV Saved', `${rows.length} buyer row${rows.length === 1 ? '' : 's'} exported.`);
+                    }
+                });
+
+                void loadRowsFromServer({ force: true, allowSeed: true });
+
+                pollingHandle = window.setInterval(() => {
+                    void loadRowsFromServer({ force: false, allowSeed: false });
+                }, 3000);
+
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible') {
+                        void loadRowsFromServer({ force: false, allowSeed: false });
+                    }
+                });
+
+                window.addEventListener('beforeunload', function () {
+                    if (pendingSaveTimer) {
+                        window.clearTimeout(pendingSaveTimer);
+                        pendingSaveTimer = null;
+                    }
+                });
+
+                window.addEventListener('pagehide', function () {
+                    if (pollingHandle) {
+                        window.clearInterval(pollingHandle);
+                        pollingHandle = null;
+                    }
+                });
+            };
+
+            if (!getAuthToken()) {
                 redirectUnauthorized();
                 return;
             }
 
-            renderRows(getInitialRowsFallback());
-            lastAppliedSignature = getRowSignature(getRowsFromDom());
-            setSyncStatus('Syncing shared admin sheet...', 'info');
-            void getCaliforniaCityZipLookup().then(() => {
-                return getCaliforniaCountyZipLookup();
-            }).then(() => {
-                scheduleBuyerCoverageMapRender(getRowsFromDom());
-            }).catch(() => null);
-
-            addRowBtn.addEventListener('click', function () {
-                const newRow = createRow({ activeBuyer: 'BUYER' });
-                body.appendChild(newRow);
-                scheduleSaveRows();
-
-                const editableCells = newRow.querySelectorAll('td');
-                if (editableCells[1] && typeof editableCells[1].focus === 'function') {
-                    editableCells[1].focus();
-                }
-            });
-
-            saveCsvBtn.addEventListener('click', async function () {
-                if (pendingSaveTimer) {
-                    window.clearTimeout(pendingSaveTimer);
-                    pendingSaveTimer = null;
-                }
-
-                try {
-                    await saveRowsToServer();
-                } catch (error) {
-                    return;
-                }
-
-                const rows = getRowsFromDom();
-                const csvText = buildCsvFromRows(rows);
-                downloadCsvFile(csvText);
-                if (typeof window.showDashboardToast === 'function') {
-                    window.showDashboardToast('success', 'CSV Saved', `${rows.length} buyer row${rows.length === 1 ? '' : 's'} exported.`);
-                }
-            });
-
-            void loadRowsFromServer({ force: true, allowSeed: true });
-
-            pollingHandle = window.setInterval(() => {
-                void loadRowsFromServer({ force: false, allowSeed: false });
-            }, 3000);
-
-            document.addEventListener('visibilitychange', function () {
-                if (document.visibilityState === 'visible') {
-                    void loadRowsFromServer({ force: false, allowSeed: false });
-                }
-            });
-
-            window.addEventListener('beforeunload', function () {
-                if (pendingSaveTimer) {
-                    window.clearTimeout(pendingSaveTimer);
-                    pendingSaveTimer = null;
-                }
-            });
-
-            window.addEventListener('pagehide', function () {
-                if (pollingHandle) {
-                    window.clearInterval(pollingHandle);
-                    pollingHandle = null;
-                }
-            });
+            void boot();
         })();
     </script>
 </body>
