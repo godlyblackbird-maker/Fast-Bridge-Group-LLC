@@ -1584,7 +1584,7 @@
     if (!smtpUserInput) return; // not on settings page
 
     function getToken() {
-      return localStorage.getItem('authToken') || '';
+      return String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
     }
 
     function cacheSmtpSettings(settings) {

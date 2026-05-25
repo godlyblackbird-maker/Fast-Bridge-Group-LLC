@@ -227,10 +227,50 @@
     sessionStorage.removeItem(AUTH_TAB_SNAPSHOT_KEY);
   }
 
+  function decodeJwtPayloadUnsafe(tokenLike) {
+    const parts = String(tokenLike || '').trim().split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+
+    try {
+      const normalizedBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalizedBase64.padEnd(normalizedBase64.length + ((4 - (normalizedBase64.length % 4)) % 4), '=');
+      return JSON.parse(window.atob(padded));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function getAuthSessionFingerprint(tokenLike) {
+    const token = String(tokenLike || '').trim();
+    if (!token) {
+      return '';
+    }
+
+    if (token === ISAAC_ADMIN_BYPASS_TOKEN) {
+      return 'bypass:isaac-admin';
+    }
+
+    const decoded = decodeJwtPayloadUnsafe(token);
+    const sessionId = String(decoded && decoded.sessionId || '').trim();
+    if (sessionId) {
+      return `session:${sessionId}`;
+    }
+
+    const userId = String(decoded && decoded.id || '').trim();
+    if (userId) {
+      return `user:${userId}`;
+    }
+
+    return '';
+  }
+
   function persistAuthTabSnapshot(userLike, options) {
     const config = options && typeof options === 'object' ? options : {};
-    const token = String(config.token || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const token = String(config.token || getStoredAuthToken() || '').trim();
     const normalizedUser = normalizeKnownUser(userLike);
+    const sessionKey = getAuthSessionFingerprint(token);
 
     if (!token || !normalizedUser || !String(normalizedUser.email || '').trim()) {
       clearAuthTabSnapshot();
@@ -238,7 +278,7 @@
     }
 
     const snapshot = {
-      token,
+      sessionKey,
       user: {
         email: normalizedUser.email,
         name: String(normalizedUser.name || 'User').trim(),
@@ -258,14 +298,15 @@
     }
 
     const config = options && typeof options === 'object' ? options : {};
-    const currentToken = String(config.token || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
-    const snapshotToken = String(snapshot.token || '').trim();
+    const currentToken = String(config.token || getStoredAuthToken() || '').trim();
+    const currentSessionKey = getAuthSessionFingerprint(currentToken);
+    const snapshotSessionKey = String(snapshot.sessionKey || snapshot.token || '').trim();
     const snapshotUser = normalizeKnownUser(snapshot.user || snapshot);
     const currentUser = normalizeKnownUser(userLike);
     const snapshotEmail = normalizeKnownEmail(snapshotUser && snapshotUser.email || '');
     const currentEmail = normalizeKnownEmail(currentUser && currentUser.email || '');
 
-    if (snapshotToken && snapshotToken !== currentToken) {
+    if (snapshotSessionKey && currentSessionKey && snapshotSessionKey !== currentSessionKey) {
       return true;
     }
 
@@ -307,7 +348,7 @@
     }
 
     const lockedUser = getVerifiedAuthUserLock();
-    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+  const activeToken = getStoredAuthToken();
     const resolvedUser = storedUser || lockedUser;
 
     if (isAuthTabSnapshotMismatch(resolvedUser, { token: activeToken })) {
@@ -368,7 +409,7 @@
   }
 
   function getVerifiedAuthUserLock() {
-    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const activeToken = getStoredAuthToken();
     if (!activeToken) {
       return null;
     }
@@ -378,9 +419,10 @@
       return null;
     }
 
-    const lockToken = String(lockRecord.token || '').trim();
+    const activeSessionKey = getAuthSessionFingerprint(activeToken);
+    const lockSessionKey = String(lockRecord.sessionKey || lockRecord.token || '').trim();
     const lockedUser = normalizeKnownUser(lockRecord.user || lockRecord);
-    if (!lockToken || lockToken !== activeToken || !lockedUser || !String(lockedUser.email || '').trim()) {
+    if (!lockSessionKey || !activeSessionKey || lockSessionKey !== activeSessionKey || !lockedUser || !String(lockedUser.email || '').trim()) {
       return null;
     }
 
@@ -417,7 +459,7 @@
   }
 
   function persistVerifiedAuthUserLock(userLike, options) {
-    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const activeToken = getStoredAuthToken();
     const normalizedUser = normalizeKnownUser(userLike);
     if (!activeToken || !normalizedUser) {
       return null;
@@ -429,14 +471,15 @@
     const lockedUser = normalizeKnownUser(lockRecord && (lockRecord.user || lockRecord));
     const lockedEmail = normalizeKnownEmail(lockedUser && lockedUser.email || '');
     const nextEmail = normalizeKnownEmail(normalizedUser.email || '');
-    const lockToken = String(lockRecord && lockRecord.token || '').trim();
+    const activeSessionKey = getAuthSessionFingerprint(activeToken);
+    const lockSessionKey = String(lockRecord && (lockRecord.sessionKey || lockRecord.token) || '').trim();
 
-    if (!forceWrite && lockToken === activeToken && lockedEmail && nextEmail && lockedEmail !== nextEmail) {
+    if (!forceWrite && lockSessionKey && activeSessionKey && lockSessionKey === activeSessionKey && lockedEmail && nextEmail && lockedEmail !== nextEmail) {
       return forceLogoutForAuthMismatch(lockedUser, normalizedUser);
     }
 
     localStorage.setItem(AUTH_USER_LOCK_KEY, JSON.stringify({
-      token: activeToken,
+      sessionKey: activeSessionKey,
       user: normalizedUser,
       updatedAt: Date.now()
     }));
@@ -538,7 +581,7 @@
     }
 
     const lockedUser = getVerifiedAuthUserLock();
-    const activeToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+    const activeToken = getStoredAuthToken();
     const resolvedUser = storedUser || lockedUser;
 
     if (isAuthTabSnapshotMismatch(resolvedUser, { token: activeToken })) {
@@ -606,19 +649,19 @@
   }
 
   function getStoredAuthToken() {
-    const localToken = String(localStorage.getItem('authToken') || '').trim();
-    if (localToken) {
-      return localToken;
+    const sessionToken = String(sessionStorage.getItem('authToken') || '').trim();
+    if (sessionToken) {
+      return sessionToken;
     }
 
-    const sessionToken = String(sessionStorage.getItem('authToken') || '').trim();
-    if (!sessionToken) {
+    const localToken = String(localStorage.getItem('authToken') || '').trim();
+    if (!localToken) {
       return '';
     }
 
-    localStorage.setItem('authToken', sessionToken);
-    sessionStorage.removeItem('authToken');
-    return sessionToken;
+    sessionStorage.setItem('authToken', localToken);
+    localStorage.removeItem('authToken');
+    return localToken;
   }
 
   function isAdminUser(userLike) {

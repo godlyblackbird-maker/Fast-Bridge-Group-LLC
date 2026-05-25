@@ -37,6 +37,178 @@ const { sendNewLeadEmail, sendAgentEmail } = require('./sendEmail.js/sendEmail')
 const app = express();
 app.set('trust proxy', true);
 
+const DEFAULT_JWT_SECRET = 'your-secret-key-change-in-production';
+
+function isUnsafeJwtSecret(secret) {
+  const normalizedSecret = String(secret || '').trim();
+  return !normalizedSecret || normalizedSecret === DEFAULT_JWT_SECRET;
+}
+
+function resolveJwtSecret() {
+  const configuredSecret = String(process.env.JWT_SECRET || '').trim();
+  if (!isUnsafeJwtSecret(configuredSecret)) {
+    return configuredSecret;
+  }
+
+  if (String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production') {
+    throw new Error('JWT_SECRET must be set to a strong value in production.');
+  }
+
+  const generatedSecret = crypto.randomBytes(48).toString('hex');
+  console.warn('JWT_SECRET is not configured. Using an ephemeral development secret for this server process.');
+  return generatedSecret;
+}
+
+function readConfiguredSeedPassword(envName) {
+  return String(process.env[envName] || '').trim();
+}
+
+function buildAllowedCorsOrigins() {
+  const defaults = [
+    'https://fastbridgegroupllc.com',
+    'https://www.fastbridgegroupllc.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ];
+  const configuredOrigins = [
+    process.env.PUBLIC_APP_URL,
+    process.env.APP_URL,
+    process.env.RENDER_EXTERNAL_URL,
+    process.env.CORS_ALLOWED_ORIGINS
+  ].flatMap((value) => String(value || '').split(','));
+
+  return new Set(
+    [...defaults, ...configuredOrigins]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  );
+}
+
+const ALLOWED_CORS_ORIGINS = buildAllowedCorsOrigins();
+
+const oauthLoginExchangeStore = new Map();
+const authRateLimitStore = new Map();
+
+function cleanupExpiringStoreEntries(store, now = Date.now()) {
+  for (const [key, value] of store.entries()) {
+    if (!value || Number(value.expiresAt) <= now) {
+      store.delete(key);
+    }
+  }
+}
+
+function consumeOAuthLoginExchange(code) {
+  const normalizedCode = String(code || '').trim();
+  if (!normalizedCode) {
+    return null;
+  }
+
+  cleanupExpiringStoreEntries(oauthLoginExchangeStore);
+  const entry = oauthLoginExchangeStore.get(normalizedCode);
+  oauthLoginExchangeStore.delete(normalizedCode);
+  if (!entry || Number(entry.expiresAt) <= Date.now()) {
+    return null;
+  }
+  return entry.payload || null;
+}
+
+function createOAuthLoginExchange(payload, ttlMs = 2 * 60 * 1000) {
+  const exchangeCode = crypto.randomUUID();
+  oauthLoginExchangeStore.set(exchangeCode, {
+    payload,
+    expiresAt: Date.now() + Math.max(30 * 1000, Number(ttlMs) || 0)
+  });
+  cleanupExpiringStoreEntries(oauthLoginExchangeStore);
+  return exchangeCode;
+}
+
+function getRateLimitKey(req, extraKey = '') {
+  const requestIp = getClientIp(req) || req.ip || 'unknown-ip';
+  return `${requestIp}::${String(extraKey || '').trim().toLowerCase()}`;
+}
+
+function registerRateLimitAttempt(req, options = {}) {
+  const config = options && typeof options === 'object' ? options : {};
+  const now = Date.now();
+  const windowMs = Math.max(10 * 1000, Number(config.windowMs) || 0);
+  const maxAttempts = Math.max(1, Number(config.maxAttempts) || 1);
+  const extraKey = String(config.extraKey || '').trim().toLowerCase();
+  const storeKey = getRateLimitKey(req, extraKey);
+  const existing = authRateLimitStore.get(storeKey);
+  const attempts = Array.isArray(existing?.attempts)
+    ? existing.attempts.filter((timestamp) => Number(timestamp) > now - windowMs)
+    : [];
+
+  attempts.push(now);
+  authRateLimitStore.set(storeKey, {
+    attempts,
+    expiresAt: now + windowMs
+  });
+  cleanupExpiringStoreEntries(authRateLimitStore, now);
+
+  const remaining = Math.max(0, maxAttempts - attempts.length);
+  const retryAfterSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  return {
+    limited: attempts.length > maxAttempts,
+    remaining,
+    retryAfterSeconds
+  };
+}
+
+function clearRateLimitAttempts(req, options = {}) {
+  const config = options && typeof options === 'object' ? options : {};
+  authRateLimitStore.delete(getRateLimitKey(req, String(config.extraKey || '').trim().toLowerCase()));
+}
+
+function authAttemptLimiter(options = {}) {
+  const config = options && typeof options === 'object' ? options : {};
+  const windowMs = Math.max(10 * 1000, Number(config.windowMs) || 15 * 60 * 1000);
+  const maxAttempts = Math.max(1, Number(config.maxAttempts) || 5);
+  const keyBuilder = typeof config.keyBuilder === 'function' ? config.keyBuilder : (() => '');
+
+  return function rateLimitedAuthAttempt(req, res, next) {
+    const extraKey = keyBuilder(req);
+    const state = registerRateLimitAttempt(req, { windowMs, maxAttempts, extraKey });
+    if (!state.limited) {
+      res.locals = res.locals || {};
+      res.locals.authRateLimit = { windowMs, maxAttempts, extraKey };
+      next();
+      return;
+    }
+
+    res.setHeader('Retry-After', String(state.retryAfterSeconds));
+    res.status(429).json({ error: 'Too many sign-in attempts. Please wait and try again.' });
+  };
+}
+
+function clearAuthRateLimitForRequest(req, res) {
+  const config = res?.locals?.authRateLimit;
+  if (!config) {
+    return;
+  }
+  clearRateLimitAttempts(req, config);
+}
+
+function setSecurityHeaders(req, res, next) {
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  if (String(req.secure || '').trim() === 'true' || req.secure) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+}
+
+function isAllowedCorsOrigin(origin) {
+  const normalizedOrigin = String(origin || '').trim();
+  if (!normalizedOrigin) {
+    return true;
+  }
+  return ALLOWED_CORS_ORIGINS.has(normalizedOrigin);
+}
+
 function readPackageMetadata() {
   const pkgPath = path.join(__dirname, 'package.json');
   return JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
@@ -137,7 +309,7 @@ app.get('/api/mls/listings', async (req, res) => {
   }
 });
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = resolveJwtSecret();
 const OPENAI_MODEL = String(process.env.OPENAI_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
 const DEFAULT_STRIPE_PUBLISHABLE_KEY = 'pk_test_51TDU29Q3MV5dyF2TauLp1mMkQukSL6PbAlgHN9zzm5fH9lzZsQIHN4iOTjh1Vu1eAsyOKGZ6bXSIANej5zS9XA2p00cn6NJsZL';
 const STRIPE_PUBLISHABLE_KEY = String(process.env.STRIPE_PUBLISHABLE_KEY || DEFAULT_STRIPE_PUBLISHABLE_KEY).trim();
@@ -355,7 +527,7 @@ const LEGACY_EMAIL_ALIASES = new Map([
   ['medinastj@gmail.com', CANONICAL_STEVE_EMAIL]
 ]);
 const CANONICAL_LORIA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('LORIA_BROKER_EMAIL') || 'loria.rigby@fastbridgegroupllc.com');
-const CANONICAL_LORIA_PASSWORD = String(process.env.LORIA_BROKER_PASSWORD || 'Password123').trim() || 'Password123';
+const CANONICAL_LORIA_PASSWORD = readConfiguredSeedPassword('LORIA_BROKER_PASSWORD');
 const CANONICAL_LORIA_NAME = String(process.env.LORIA_BROKER_NAME || 'Loria Rigby').trim() || 'Loria Rigby';
 const LORIA_BROKERAGE_NAME = String(process.env.LORIA_BROKERAGE_NAME || `${CANONICAL_LORIA_NAME} Brokerage`).trim() || `${CANONICAL_LORIA_NAME} Brokerage`;
 const LORIA_BROKER_LICENSE_NUMBER = String(process.env.LORIA_BROKER_LICENSE_NUMBER || '').trim();
@@ -363,16 +535,16 @@ const LORIA_BROKER_PHONE = String(process.env.LORIA_BROKER_PHONE || '').trim();
 const LORIA_BROKER_WEBSITE = String(process.env.LORIA_BROKER_WEBSITE || '').trim();
 const LORIA_VOW_OPERATOR_LABEL = String(process.env.LORIA_VOW_OPERATOR_LABEL || 'Broker-Operated VOW').trim() || 'Broker-Operated VOW';
 const CANONICAL_ELSA_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('ELSA_TUCKER_EMAIL') || 'elsa.tucker@fastbridgegroupllc.com');
-const CANONICAL_ELSA_PASSWORD = String(process.env.ELSA_TUCKER_PASSWORD || 'Password123').trim() || 'Password123';
+const CANONICAL_ELSA_PASSWORD = readConfiguredSeedPassword('ELSA_TUCKER_PASSWORD');
 const CANONICAL_ELSA_NAME = String(process.env.ELSA_TUCKER_NAME || 'ELSA TUCKER').trim() || 'ELSA TUCKER';
 const CANONICAL_STEVEN_CASTILLO_EMAIL = normalizeKnownEmail(getFirstConfiguredEnvValue('STEVEN_CASTILLO_EMAIL') || 'steve.castillo@fastbridgegroupllc.com');
-const CANONICAL_STEVEN_CASTILLO_PASSWORD = String(process.env.STEVEN_CASTILLO_PASSWORD || 'Password123').trim() || 'Password123';
+const CANONICAL_STEVEN_CASTILLO_PASSWORD = readConfiguredSeedPassword('STEVEN_CASTILLO_PASSWORD');
 const CANONICAL_STEVEN_CASTILLO_NAME = String(process.env.STEVEN_CASTILLO_NAME || 'Steven Castillo').trim() || 'Steven Castillo';
 const CANONICAL_USER_TEST_ACC_EMAIL = 'user.test.acc@fastbridgegroupllc.com';
-const CANONICAL_USER_TEST_ACC_PASSWORD = '246810';
+const CANONICAL_USER_TEST_ACC_PASSWORD = readConfiguredSeedPassword('USER_TEST_ACC_PASSWORD');
 const CANONICAL_USER_TEST_ACC_NAME = 'USER TEST ACC';
 const CANONICAL_PREMIUM_ACC_EMAIL = 'premium.acc@fastbridgegroupllc.com';
-const CANONICAL_PREMIUM_ACC_PASSWORD = '315598';
+const CANONICAL_PREMIUM_ACC_PASSWORD = readConfiguredSeedPassword('PREMIUM_ACC_PASSWORD');
 const CANONICAL_PREMIUM_ACC_NAME = 'PREMIUM ACC';
 const CANONICAL_TEST_EMAIL = 'test@fastbridgegroupllc.com';
 const CANONICAL_TEST_PASSWORD = 'subzero';
@@ -6230,7 +6402,18 @@ async function queryOpenAiForStructuredJson(systemPrompt, userPrompt, options = 
 }
 
 // Middleware
-app.use(cors());
+app.use(setSecurityHeaders);
+app.use(cors({
+  origin(origin, callback) {
+    if (isAllowedCorsOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error('Origin not allowed by CORS'));
+  },
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: false, limit: '25mb' }));
 
@@ -14324,7 +14507,7 @@ async function syncIsaacAdminAccount() {
   const canonicalEmail = CANONICAL_ISAAC_EMAIL;
   const legacyEmails = ['isaacs.hesed@gmail.com', 'isaacs.hesed@fastbridgegroup.com'];
   const canonicalName = 'ISAAC HARO';
-  const canonicalPassword = '315598';
+  const canonicalPassword = readConfiguredSeedPassword('ISAAC_ADMIN_PASSWORD');
   const envSmtpConfig = getPerUserSmtpEnvConfig(canonicalEmail);
   const envSmtpPass = String(envSmtpConfig.smtpPass || '').trim();
   const envSmtpSignature = String(envSmtpConfig.smtpSignature || '').trim();
@@ -14338,9 +14521,13 @@ async function syncIsaacAdminAccount() {
       [canonicalEmail, legacyEmails[0], legacyEmails[1], canonicalName, canonicalEmail]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
-
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('ISAAC_ADMIN_PASSWORD is not configured. Skipping Isaac admin account auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, 'admin', 1, canonicalEmail, envSmtpPass, envSmtpSignature]
@@ -14357,13 +14544,15 @@ async function syncIsaacAdminAccount() {
     const nextSmtpUser = shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user;
     const nextSmtpPass = currentSmtpPass || envSmtpPass;
     const nextSmtpSignature = currentSmtpSignature || envSmtpSignature;
+    const shouldResetPassword = Boolean(canonicalPassword) && (!String(account.password_hash || '').trim() || Number(account.access_granted) !== 1 || currentEmail !== canonicalEmail);
+    const nextPasswordHash = shouldResetPassword ? await bcrypt.hash(canonicalPassword, 10) : account.password_hash;
 
     await dbRun(
       'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
-        hash,
+        nextPasswordHash,
         'admin',
         nextSmtpUser,
         nextSmtpPass,
@@ -14471,9 +14660,13 @@ async function syncSteveAdminAccount() {
       [canonicalEmail, legacyEmails[0], legacyEmails[1], canonicalName, canonicalEmail, legacyEmails[0], legacyEmails[1]]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
-
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('STEVE_MEDINA_PASSWORD is not configured. Skipping Steve admin account auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, 'admin', 1, canonicalEmail, envSmtpPass, envSmtpSignature]
@@ -14490,13 +14683,15 @@ async function syncSteveAdminAccount() {
     const nextSmtpUser = shouldUpdateSmtpUser ? canonicalEmail : account.smtp_user;
     const nextSmtpPass = currentSmtpPass || envSmtpPass;
     const nextSmtpSignature = currentSmtpSignature || envSmtpSignature;
+    const shouldResetPassword = Boolean(canonicalPassword) && (!String(account.password_hash || '').trim() || Number(account.access_granted) !== 1 || currentEmail !== canonicalEmail);
+    const nextPasswordHash = shouldResetPassword ? await bcrypt.hash(canonicalPassword, 10) : account.password_hash;
 
     await dbRun(
       'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
-        hash,
+        nextPasswordHash,
         'admin',
         nextSmtpUser,
         nextSmtpPass,
@@ -14534,9 +14729,13 @@ async function syncLoriaBrokerAccount() {
       [canonicalEmail, canonicalName, canonicalEmail]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
-
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('LORIA_BROKER_PASSWORD is not configured. Skipping Loria broker account auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, 'broker', 1, canonicalEmail, '', '']
@@ -14550,13 +14749,15 @@ async function syncLoriaBrokerAccount() {
     const currentSmtpPass = String(account.smtp_pass || '').trim();
     const currentSmtpSignature = String(account.smtp_signature || '').trim();
     const nextSmtpUser = !currentSmtpUser || currentSmtpUser === currentEmail ? canonicalEmail : account.smtp_user;
+    const shouldResetPassword = Boolean(canonicalPassword) && (!String(account.password_hash || '').trim() || Number(account.access_granted) !== 1 || currentEmail !== canonicalEmail);
+    const nextPasswordHash = shouldResetPassword ? await bcrypt.hash(canonicalPassword, 10) : account.password_hash;
 
     await dbRun(
       'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
-        hash,
+        nextPasswordHash,
         'broker',
         nextSmtpUser,
         currentSmtpPass,
@@ -14595,9 +14796,13 @@ async function syncElsaUserAccount() {
       [canonicalEmail, canonicalName, canonicalEmail]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
-
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('ELSA_TUCKER_PASSWORD is not configured. Skipping Elsa user account auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
@@ -14707,9 +14912,13 @@ async function syncUserTestBasicAccount() {
       [canonicalEmail, canonicalName, canonicalEmail]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
-
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('USER_TEST_ACC_PASSWORD is not configured. Skipping USER TEST ACC auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
@@ -14720,13 +14929,15 @@ async function syncUserTestBasicAccount() {
 
     const currentSmtpPass = String(account.smtp_pass || '').trim();
     const currentSmtpSignature = String(account.smtp_signature || '').trim();
+    const shouldResetPassword = Boolean(canonicalPassword) && (!String(account.password_hash || '').trim() || Number(account.access_granted) !== 1);
+    const nextPasswordHash = shouldResetPassword ? await bcrypt.hash(canonicalPassword, 10) : account.password_hash;
 
     await dbRun(
       'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
-        hash,
+        nextPasswordHash,
         canonicalRole,
         account.smtp_user || '',
         currentSmtpPass,
@@ -14767,9 +14978,13 @@ async function syncPremiumTestAccount() {
       [canonicalEmail, canonicalName, canonicalEmail]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
-
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('PREMIUM_ACC_PASSWORD is not configured. Skipping PREMIUM ACC auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
@@ -14806,13 +15021,15 @@ async function syncPremiumTestAccount() {
 
     const currentSmtpPass = String(account.smtp_pass || '').trim();
     const currentSmtpSignature = String(account.smtp_signature || '').trim();
+    const shouldResetPassword = Boolean(canonicalPassword) && (!String(account.password_hash || '').trim() || Number(account.access_granted) !== 1);
+    const nextPasswordHash = shouldResetPassword ? await bcrypt.hash(canonicalPassword, 10) : account.password_hash;
 
     await dbRun(
       'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
-        hash,
+        nextPasswordHash,
         canonicalRole,
         account.smtp_user || '',
         currentSmtpPass,
@@ -14875,9 +15092,13 @@ async function syncStevenCastilloUserAccount() {
       [canonicalEmail, canonicalName, canonicalEmail]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
-
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('STEVEN_CASTILLO_PASSWORD is not configured. Skipping Steven Castillo account auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, canonicalRole, 1, '', '', '']
@@ -14914,13 +15135,15 @@ async function syncStevenCastilloUserAccount() {
 
     const currentSmtpPass = String(account.smtp_pass || '').trim();
     const currentSmtpSignature = String(account.smtp_signature || '').trim();
+    const shouldResetPassword = Boolean(canonicalPassword) && (!String(account.password_hash || '').trim() || Number(account.access_granted) !== 1);
+    const nextPasswordHash = shouldResetPassword ? await bcrypt.hash(canonicalPassword, 10) : account.password_hash;
 
     await dbRun(
       'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
       [
         canonicalName,
         canonicalEmail,
-        hash,
+        nextPasswordHash,
         canonicalRole,
         account.smtp_user || '',
         currentSmtpPass,
@@ -14970,7 +15193,7 @@ async function syncStevenCastilloUserAccount() {
 async function syncPublicTestAccount() {
   const canonicalEmail = CANONICAL_TEST_EMAIL;
   const canonicalName = CANONICAL_TEST_NAME;
-  const canonicalPassword = CANONICAL_TEST_PASSWORD;
+  const canonicalPassword = readConfiguredSeedPassword('PUBLIC_TEST_PASSWORD');
 
   try {
     const account = await dbGet(
@@ -14981,10 +15204,15 @@ async function syncPublicTestAccount() {
       [canonicalEmail, canonicalName, canonicalEmail]
     );
 
-    const hash = await bcrypt.hash(canonicalPassword, 10);
     let userId = null;
 
     if (!account) {
+      if (!canonicalPassword) {
+        console.warn('PUBLIC_TEST_PASSWORD is not configured. Skipping public test account auto-create to avoid weak default credentials.');
+        return;
+      }
+
+      const hash = await bcrypt.hash(canonicalPassword, 10);
       const insertResult = await dbRun(
         'INSERT INTO users (name, email, password_hash, role, access_granted, smtp_user, smtp_pass, smtp_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [canonicalName, canonicalEmail, hash, TEST_USER_ROLE, 1, '', '', '']
@@ -14993,9 +15221,11 @@ async function syncPublicTestAccount() {
       console.log('Public test account created/synced');
     } else {
       userId = account.id;
+      const shouldResetPassword = Boolean(canonicalPassword) && (!String(account.password_hash || '').trim() || Number(account.access_granted) !== 1);
+      const nextPasswordHash = shouldResetPassword ? await bcrypt.hash(canonicalPassword, 10) : account.password_hash;
       await dbRun(
         'UPDATE users SET name = ?, email = ?, password_hash = ?, role = ?, access_granted = 1, smtp_user = ?, smtp_pass = ?, smtp_signature = ? WHERE id = ?',
-        [canonicalName, canonicalEmail, hash, TEST_USER_ROLE, '', '', '', account.id]
+        [canonicalName, canonicalEmail, nextPasswordHash, TEST_USER_ROLE, '', '', '', account.id]
       );
       console.log('Public test account synced');
     }
@@ -16588,15 +16818,23 @@ app.get('/auth/google/callback', async (req, res) => {
     const security = await getUserSecuritySettings(login.user.id);
     const params = new URLSearchParams({ oauth: 'google' });
     if (security.enabled && security.appEnabled && security.totpSecret && security.appVerifiedAt) {
-      params.set('two_factor', '1');
-      params.set('challenge', issueTwoFactorChallenge(login.user));
-      params.set('email', login.user.email);
+      params.set('oauth_code', createOAuthLoginExchange({
+        requiresTwoFactor: true,
+        challengeToken: issueTwoFactorChallenge(login.user),
+        email: login.user.email,
+        provider: 'google'
+      }));
       return res.redirect(`/login.html?${params.toString()}`);
     }
 
     const sessionId = await createAuthSession(login.user.id, req);
     await dbRun('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [login.user.id]);
-    params.set('token', issueAuthToken(login.user, sessionId));
+    params.set('oauth_code', createOAuthLoginExchange({
+      success: true,
+      token: issueAuthToken(login.user, sessionId),
+      user: serializeUser(login.user),
+      provider: 'google'
+    }));
     return res.redirect(`/login.html?${params.toString()}`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
@@ -16607,8 +16845,29 @@ app.get('/auth/google/callback', async (req, res) => {
   }
 });
 
+app.post('/api/oauth/exchange', authAttemptLimiter({ windowMs: 10 * 60 * 1000, maxAttempts: 10 }), async (req, res) => {
+  const exchangeCode = String(req.body?.code || '').trim();
+  if (!exchangeCode) {
+    return res.status(400).json({ error: 'OAuth exchange code is required.' });
+  }
+
+  const payload = consumeOAuthLoginExchange(exchangeCode);
+  if (!payload) {
+    return res.status(401).json({ error: 'OAuth sign-in is invalid or has expired.' });
+  }
+
+  clearAuthRateLimitForRequest(req, res);
+  return res.json({ success: true, ...payload });
+});
+
 // Login endpoint
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authAttemptLimiter({
+  windowMs: 15 * 60 * 1000,
+  maxAttempts: 6,
+  keyBuilder(request) {
+    return normalizeKnownEmail(request.body?.email || '');
+  }
+}), async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -16683,6 +16942,7 @@ app.post('/api/login', async (req, res) => {
       await dbRun('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
       const sessionId = await createAuthSession(user.id, req);
       const token = issueAuthToken(user, sessionId);
+      clearAuthRateLimitForRequest(req, res);
 
       return res.json({
         success: true,
@@ -16696,7 +16956,7 @@ app.post('/api/login', async (req, res) => {
   });
 });
 
-app.post('/api/login/2fa', async (req, res) => {
+app.post('/api/login/2fa', authAttemptLimiter({ windowMs: 10 * 60 * 1000, maxAttempts: 8 }), async (req, res) => {
   const challengeToken = String(req.body?.challengeToken || '').trim();
   const code = String(req.body?.code || '').trim();
 
@@ -16723,6 +16983,7 @@ app.post('/api/login/2fa', async (req, res) => {
     await dbRun('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
     const sessionId = await createAuthSession(user.id, req);
     const token = issueAuthToken(user, sessionId);
+    clearAuthRateLimitForRequest(req, res);
 
     return res.json({
       success: true,
@@ -16733,6 +16994,26 @@ app.post('/api/login/2fa', async (req, res) => {
     return res.status(401).json({ error: 'The two-factor challenge is invalid or expired.' });
   }
 });
+
+async function revokeAllAuthSessionsForUser(userId, reason = 'revoked') {
+  const normalizedUserId = Number.parseInt(String(userId || ''), 10);
+  if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+    return [];
+  }
+
+  const sessionRows = await dbAll('SELECT id FROM auth_sessions WHERE user_id = ? AND revoked_at IS NULL', [normalizedUserId]);
+  const sessionIds = (sessionRows || [])
+    .map((row) => String(row?.id || '').trim())
+    .filter(Boolean);
+
+  sessionIds.forEach((sessionId) => revokedSessionIds.add(sessionId));
+  await dbRun(
+    'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP, revoked_reason = COALESCE(revoked_reason, ?) WHERE user_id = ? AND revoked_at IS NULL',
+    [String(reason || 'revoked').slice(0, 80), normalizedUserId]
+  );
+
+  return sessionIds;
+}
 
 // Public registration is disabled. Use admin-only endpoint below.
 app.post('/api/register', (req, res) => {
@@ -17278,6 +17559,7 @@ app.post('/api/security/change-password', async (req, res) => {
 
     const nextHash = await bcrypt.hash(newPassword, 10);
     await dbRun('UPDATE users SET password_hash = ? WHERE id = ?', [nextHash, decoded.id]);
+    await revokeAllAuthSessionsForUser(decoded.id, 'password-changed');
     return res.json({ success: true, message: 'Password updated successfully.' });
   } catch (error) {
     console.error('Change password error:', error);

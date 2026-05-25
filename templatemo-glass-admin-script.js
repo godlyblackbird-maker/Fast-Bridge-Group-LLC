@@ -9411,7 +9411,7 @@ function initNavbarDateTime() {
         }
 
         function initSecuritySettingsControls() {
-            const token = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || '').trim();
+            const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
             const passwordStatus = document.getElementById('security-password-status');
             const currentPassword = document.getElementById('security-current-password');
             const newPassword = document.getElementById('security-new-password');
@@ -9488,7 +9488,7 @@ function initNavbarDateTime() {
             };
 
             const securityFetch = async (url, options = {}) => {
-                const authToken = String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || '').trim();
+                const authToken = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
                 if (!authToken) {
                     throw new Error('Sign in again to manage account security.');
                 }
@@ -10006,7 +10006,7 @@ function initNavbarDateTime() {
             }
 
             function getStoredAuthToken() {
-                return String(localStorage.getItem('authToken') || '').trim();
+                return String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
             }
 
             async function loadStripeConfig() {
@@ -10371,7 +10371,10 @@ function initNavbarDateTime() {
 
                     currentRole = String(data.user?.role || premiumRole).trim().toLowerCase();
                     activeSubscription = data.subscription || null;
-                    localStorage.setItem('authToken', String(data.token || token));
+                    if (String(data.token || '').trim()) {
+                        sessionStorage.setItem('authToken', String(data.token || '').trim());
+                        localStorage.removeItem('authToken');
+                    }
                     persistStoredCurrentUserIdentity(data.user);
                     setUserScopedValue(SUBSCRIPTION_PLAN_KEY, workspaceUser.key, 'premium');
                     fillBillingForm(activeSubscription?.billingProfile);
@@ -11787,7 +11790,7 @@ function initNavbarDateTime() {
         }
 
         async function requestAiResponse(question) {
-            const token = localStorage.getItem('authToken');
+            const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
             const headers = {
                 'Content-Type': 'application/json'
             };
@@ -16914,7 +16917,7 @@ function initNavbarDateTime() {
                 const nextDomain = 'fastbridgegroupllc.com';
         let loadedUsers = [];
 
-        const token = localStorage.getItem('authToken');
+        const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
         let currentUser = null;
         try {
             currentUser = JSON.parse(localStorage.getItem('user') || 'null');
@@ -17337,7 +17340,7 @@ function initNavbarDateTime() {
 
         const subtitle = document.getElementById('admin-online-users-subtitle');
         const refreshButton = document.getElementById('admin-online-users-refresh');
-        const token = localStorage.getItem('authToken');
+        const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
         let currentUser = null;
         let refreshHandle = null;
 
@@ -17473,7 +17476,7 @@ function initNavbarDateTime() {
         }
 
         const subtitle = document.getElementById('access-requests-subtitle');
-        const token = localStorage.getItem('authToken');
+        const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
         let currentUser = null;
 
         try {
@@ -17893,7 +17896,7 @@ function initNavbarDateTime() {
             submissionsCard
         ].filter((element) => element instanceof HTMLElement);
         const subtitle = document.getElementById('property-submissions-subtitle');
-        const token = localStorage.getItem('authToken');
+        const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
         const workspaceUser = getWorkspaceUserContext();
         let currentUser = null;
         let hasSubmissionItems = false;
@@ -18228,7 +18231,7 @@ function initNavbarDateTime() {
         }
 
         const subtitle = document.getElementById('smtp-approval-subtitle');
-        const token = localStorage.getItem('authToken');
+        const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
         let currentUser = null;
 
         try {
@@ -20436,7 +20439,7 @@ function initNavbarDateTime() {
 
         async function loadFlyerContacts() {
             const fromApi = [];
-            const token = localStorage.getItem('authToken');
+            const token = String((window.getAuthToken && window.getAuthToken()) || sessionStorage.getItem('authToken') || localStorage.getItem('authToken') || '').trim();
 
             if (token) {
                 try {

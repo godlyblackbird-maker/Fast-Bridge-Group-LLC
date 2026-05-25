@@ -60,6 +60,70 @@ function normalizeKnownEmail(email) {
   return KNOWN_EMAIL_ALIAS_LOOKUP.get(normalizedEmail) || normalizedEmail;
 }
 
+function decodeJwtPayloadUnsafe(tokenLike) {
+  const parts = String(tokenLike || '').trim().split('.');
+  if (parts.length < 2) {
+    return null;
+  }
+
+  try {
+    const normalizedBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalizedBase64.padEnd(normalizedBase64.length + ((4 - (normalizedBase64.length % 4)) % 4), '=');
+    return JSON.parse(window.atob(padded));
+  } catch (error) {
+    return null;
+  }
+}
+
+function getAuthSessionFingerprint(tokenLike) {
+  const token = String(tokenLike || '').trim();
+  if (!token) {
+    return '';
+  }
+
+  const decoded = decodeJwtPayloadUnsafe(token);
+  const sessionId = String(decoded && decoded.sessionId || '').trim();
+  if (sessionId) {
+    return `session:${sessionId}`;
+  }
+
+  const userId = String(decoded && decoded.id || '').trim();
+  if (userId) {
+    return `user:${userId}`;
+  }
+
+  return '';
+}
+
+function getStoredAuthTokenValue() {
+  const sessionToken = String(sessionStorage.getItem('authToken') || '').trim();
+  if (sessionToken) {
+    return sessionToken;
+  }
+
+  const localToken = String(localStorage.getItem('authToken') || '').trim();
+  if (!localToken) {
+    return '';
+  }
+
+  sessionStorage.setItem('authToken', localToken);
+  localStorage.removeItem('authToken');
+  return localToken;
+}
+
+function setStoredAuthTokenValue(tokenLike) {
+  const normalizedToken = String(tokenLike || '').trim();
+  if (!normalizedToken) {
+    sessionStorage.removeItem('authToken');
+    localStorage.removeItem('authToken');
+    return '';
+  }
+
+  sessionStorage.setItem('authToken', normalizedToken);
+  localStorage.removeItem('authToken');
+  return normalizedToken;
+}
+
 function readLocalJson(key) {
   try {
     const parsed = JSON.parse(localStorage.getItem(key) || 'null');
@@ -88,7 +152,7 @@ function getLoginThemeLabel(theme) {
 function getLoginThemeUserContext() {
   const storedUser = readLocalJson('user');
   const storedProfile = readLocalJson('userProfile');
-  const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+  const authToken = getStoredAuthTokenValue();
   const userEmail = String(storedUser && storedUser.email || '').trim().toLowerCase();
   const profileEmail = String(storedProfile && storedProfile.email || '').trim().toLowerCase();
   const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
@@ -102,7 +166,7 @@ function getLoginThemeUserContext() {
 }
 
 function getLoginLiquidSettingsDestination() {
-  const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+  const authToken = getStoredAuthTokenValue();
   return authToken ? 'settings.html' : 'index.html';
 }
 
@@ -487,6 +551,7 @@ function persistAuthLock(userLike, token) {
   if (!normalizedToken) {
     return;
   }
+  const sessionKey = getAuthSessionFingerprint(normalizedToken);
 
   const normalizedUser = {
     ...userLike,
@@ -495,12 +560,12 @@ function persistAuthLock(userLike, token) {
   };
 
   localStorage.setItem(AUTH_USER_LOCK_KEY, JSON.stringify({
-    token: normalizedToken,
+    sessionKey,
     user: normalizedUser,
     updatedAt: Date.now()
   }));
   sessionStorage.setItem(AUTH_TAB_SNAPSHOT_KEY, JSON.stringify({
-    token: normalizedToken,
+    sessionKey,
     user: {
       email: normalizedUser.email,
       name: String(normalizedUser.name || 'User').trim(),
@@ -731,32 +796,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const oauthToken = params.get('token');
+  const oauthCode = params.get('oauth_code');
   const oauthError = params.get('oauth_error');
-  const oauthTwoFactor = params.get('two_factor');
-  const oauthChallenge = params.get('challenge');
-  const oauthEmail = params.get('email');
 
   if (oauthError) {
     showLoginError(decodeURIComponent(oauthError));
   }
 
-  if (oauthToken) {
-    completeOauthSignIn(oauthToken, errorDiv);
+  if (oauthCode) {
+    completeOauthSignIn(oauthCode, errorDiv);
     return;
-  }
-
-  if (oauthTwoFactor === '1' && oauthChallenge) {
-    if (emailInput && oauthEmail) {
-      emailInput.value = oauthEmail;
-    }
-    beginTwoFactorChallenge(oauthChallenge, 'Google sign-in needs the current code from your authenticator app to finish.');
-    const url = new URL(window.location.href);
-    url.searchParams.delete('two_factor');
-    url.searchParams.delete('challenge');
-    url.searchParams.delete('email');
-    url.searchParams.delete('oauth');
-    window.history.replaceState({}, document.title, url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''));
   }
 
   if (params.get('registered') === '1' && errorDiv) {
@@ -844,8 +893,9 @@ document.addEventListener('DOMContentLoaded', function() {
           }
 
           // Store token in localStorage
-          localStorage.setItem('authToken', data.token);
+          setStoredAuthTokenValue(data.token);
           persistAuthenticatedUser(data.user);
+          persistAuthLock(data.user, data.token);
           localStorage.removeItem('registeredEmail');
 
           // Redirect to dashboard
@@ -908,8 +958,9 @@ document.addEventListener('DOMContentLoaded', function() {
           throw new Error(data.error || 'Authenticator code verification failed.');
         }
 
-  localStorage.setItem('authToken', data.token);
+  setStoredAuthTokenValue(data.token);
   persistAuthenticatedUser(data.user);
+  persistAuthLock(data.user, data.token);
         localStorage.removeItem('registeredEmail');
         window.location.href = '/dashboard.html';
       } catch (error) {
@@ -950,33 +1001,47 @@ document.addEventListener('DOMContentLoaded', function() {
   void checkAuthStatus();
 });
 
-async function completeOauthSignIn(token, errorDiv) {
+async function completeOauthSignIn(exchangeCode, errorDiv) {
   try {
-    localStorage.setItem('authToken', token);
-
-    const verifyResponse = await fetch('/api/verify', {
+    const exchangeResponse = await fetch('/api/oauth/exchange', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ code: exchangeCode })
     });
 
-    const verifyData = await verifyResponse.json();
-    if (!verifyResponse.ok || !verifyData.success || !verifyData.user) {
-      throw new Error(verifyData.error || 'OAuth login could not be verified');
+    const exchangeData = await exchangeResponse.json().catch(() => ({}));
+    if (!exchangeResponse.ok || !exchangeData.success) {
+      throw new Error(exchangeData.error || 'OAuth login could not be completed');
     }
 
-    persistAuthenticatedUser(verifyData.user);
-    localStorage.removeItem('registeredEmail');
-
     const url = new URL(window.location.href);
-    url.searchParams.delete('token');
+    url.searchParams.delete('oauth_code');
     url.searchParams.delete('oauth_error');
+    url.searchParams.delete('oauth');
     window.history.replaceState({}, document.title, url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : ''));
 
+    if (exchangeData.requiresTwoFactor && exchangeData.challengeToken) {
+      if (emailInput && exchangeData.email) {
+        emailInput.value = exchangeData.email;
+      }
+      beginTwoFactorChallenge(exchangeData.challengeToken, 'Google sign-in needs the current code from your authenticator app to finish.');
+      return;
+    }
+
+    const token = String(exchangeData.token || '').trim();
+    if (!token || !exchangeData.user) {
+      throw new Error('OAuth login could not be verified');
+    }
+
+    setStoredAuthTokenValue(token);
+    persistAuthenticatedUser(exchangeData.user);
+    persistAuthLock(exchangeData.user, token);
+    localStorage.removeItem('registeredEmail');
     window.location.href = '/dashboard.html';
   } catch (error) {
-    localStorage.removeItem('authToken');
+    clearStoredAuthState();
     if (errorDiv) {
       errorDiv.style.display = 'block';
       errorDiv.style.color = '#ef4444';
@@ -987,7 +1052,7 @@ async function completeOauthSignIn(token, errorDiv) {
 
 // Check authentication status
 async function checkAuthStatus() {
-  const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  const token = getStoredAuthTokenValue();
   if (!token || window.location.pathname !== '/login.html') {
     return;
   }
@@ -1023,7 +1088,7 @@ async function checkAuthStatus() {
 
 // Logout function (can be called from any page)
 async function logout() {
-  const token = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+  const token = getStoredAuthTokenValue();
   if (token) {
     try {
       await fetch('/api/logout', {
@@ -1056,5 +1121,5 @@ function getCurrentUser() {
 
 // Check if user is authenticated
 function isAuthenticated() {
-  return Boolean(String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim());
+  return Boolean(getStoredAuthTokenValue());
 }
