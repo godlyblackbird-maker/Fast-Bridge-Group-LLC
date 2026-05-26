@@ -7017,14 +7017,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function initAnalyticsWhiteboardWidget() {
         const listEl = document.getElementById('analytics-whiteboard-list');
-        const inputEl = document.getElementById('analytics-whiteboard-input');
-        const addButton = document.getElementById('analytics-whiteboard-add-btn');
 
-        if (!listEl || !inputEl || !addButton) {
+        if (!listEl) {
             return;
         }
 
         const workspaceUser = getWorkspaceUserContext();
+        let whiteboardSaveTimer = null;
 
         function getWhiteboardItems() {
             return getUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, workspaceUser.key)
@@ -7044,65 +7043,190 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
         }
 
-        function renderWhiteboard() {
-            const items = getWhiteboardItems();
-            if (!items.length) {
-                listEl.innerHTML = '<li class="outreach-empty">No white board goals yet. Add your first bullet point above.</li>';
+        function createWhiteboardId() {
+            return `whiteboard-${Date.now()}-${Math.round(Math.random() * 10000)}`;
+        }
+
+        function normalizeWhiteboardText(value) {
+            return String(value || '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/\r/g, '')
+                .replace(/\n+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function focusEditableEnd(element) {
+            if (!element) {
                 return;
             }
 
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            element.focus();
+        }
+
+        function getRowEditor(row) {
+            return row ? row.querySelector('.analytics-whiteboard-item-editor') : null;
+        }
+
+        function syncRowState(row) {
+            const editor = getRowEditor(row);
+            if (!editor) {
+                return { text: '', createdAt: Date.now(), id: '' };
+            }
+
+            const text = normalizeWhiteboardText(editor.textContent);
+            if (text && !row.dataset.itemId) {
+                row.dataset.itemId = createWhiteboardId();
+            }
+            if (!row.dataset.createdAt) {
+                row.dataset.createdAt = String(Date.now());
+            }
+            row.classList.toggle('is-draft', !text);
+            return {
+                text,
+                createdAt: Number(row.dataset.createdAt) || Date.now(),
+                id: row.dataset.itemId || ''
+            };
+        }
+
+        function collectWhiteboardItemsFromDom() {
+            return Array.from(listEl.querySelectorAll('.analytics-whiteboard-item'))
+                .map((row) => {
+                    const snapshot = syncRowState(row);
+                    if (!snapshot.text) {
+                        return null;
+                    }
+                    return {
+                        id: snapshot.id || createWhiteboardId(),
+                        text: snapshot.text,
+                        createdAt: snapshot.createdAt
+                    };
+                })
+                .filter(Boolean);
+        }
+
+        function scheduleWhiteboardSave() {
+            window.clearTimeout(whiteboardSaveTimer);
+            whiteboardSaveTimer = window.setTimeout(() => {
+                setWhiteboardItems(collectWhiteboardItemsFromDom());
+            }, 180);
+        }
+
+        function createWhiteboardRow(item = {}) {
+            const listItem = document.createElement('li');
+            listItem.className = 'analytics-whiteboard-item';
+            if (item.id) {
+                listItem.dataset.itemId = item.id;
+            }
+            if (item.createdAt) {
+                listItem.dataset.createdAt = String(item.createdAt);
+            }
+
+            const editor = document.createElement('div');
+            editor.className = 'analytics-whiteboard-item-editor';
+            editor.contentEditable = 'true';
+            editor.setAttribute('role', 'textbox');
+            editor.setAttribute('aria-multiline', 'false');
+            editor.setAttribute('aria-label', 'White board bullet point');
+            editor.setAttribute('data-placeholder', 'Type a goal, reminder, or vision-board bullet point...');
+            editor.textContent = item.text || '';
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'analytics-whiteboard-remove-btn';
+            removeButton.setAttribute('aria-label', 'Remove white board bullet point');
+            removeButton.textContent = '×';
+            removeButton.addEventListener('click', () => {
+                listItem.remove();
+                cleanupWhiteboardDrafts();
+                scheduleWhiteboardSave();
+            });
+
+            editor.addEventListener('input', () => {
+                syncRowState(listItem);
+                ensureTrailingDraftRow();
+                scheduleWhiteboardSave();
+            });
+
+            editor.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                syncRowState(listItem);
+                let nextRow = listItem.nextElementSibling;
+                if (!nextRow) {
+                    nextRow = createWhiteboardRow();
+                    listEl.appendChild(nextRow);
+                }
+                cleanupWhiteboardDrafts(nextRow);
+                scheduleWhiteboardSave();
+                focusEditableEnd(getRowEditor(nextRow));
+            });
+
+            editor.addEventListener('blur', () => {
+                const snapshot = syncRowState(listItem);
+                if (!snapshot.text) {
+                    cleanupWhiteboardDrafts();
+                }
+                scheduleWhiteboardSave();
+            });
+
+            listItem.append(editor, removeButton);
+            syncRowState(listItem);
+            return listItem;
+        }
+
+        function ensureTrailingDraftRow() {
+            const rows = Array.from(listEl.querySelectorAll('.analytics-whiteboard-item'));
+            const lastRow = rows[rows.length - 1];
+            const lastEditor = getRowEditor(lastRow);
+            const lastText = normalizeWhiteboardText(lastEditor ? lastEditor.textContent : '');
+            if (!lastRow || lastText) {
+                listEl.appendChild(createWhiteboardRow());
+            }
+        }
+
+        function cleanupWhiteboardDrafts(preferredRow = null) {
+            const rows = Array.from(listEl.querySelectorAll('.analytics-whiteboard-item'));
+            const emptyRows = rows.filter((row) => !normalizeWhiteboardText(getRowEditor(row) ? getRowEditor(row).textContent : ''));
+
+            if (!rows.length) {
+                listEl.appendChild(createWhiteboardRow());
+                return;
+            }
+
+            const fallbackRow = emptyRows[emptyRows.length - 1] || null;
+            const rowToKeep = preferredRow && listEl.contains(preferredRow) ? preferredRow : fallbackRow;
+
+            emptyRows.forEach((row) => {
+                if (row !== rowToKeep) {
+                    row.remove();
+                }
+            });
+
+            ensureTrailingDraftRow();
+        }
+
+        function renderWhiteboard() {
+            if (listEl.contains(document.activeElement)) {
+                return;
+            }
+
+            const items = getWhiteboardItems();
             listEl.innerHTML = '';
             items.forEach((item) => {
-                const listItem = document.createElement('li');
-                listItem.className = 'analytics-whiteboard-item';
-
-                const text = document.createElement('span');
-                text.className = 'analytics-whiteboard-item-text';
-                text.textContent = item.text;
-
-                const removeButton = document.createElement('button');
-                removeButton.type = 'button';
-                removeButton.className = 'analytics-whiteboard-remove-btn';
-                removeButton.setAttribute('aria-label', `Remove ${item.text}`);
-                removeButton.textContent = '×';
-                removeButton.addEventListener('click', () => {
-                    const nextItems = getWhiteboardItems().filter((entry) => entry.id !== item.id);
-                    setWhiteboardItems(nextItems);
-                    renderWhiteboard();
-                });
-
-                listItem.append(text, removeButton);
-                listEl.appendChild(listItem);
+                listEl.appendChild(createWhiteboardRow(item));
             });
+            ensureTrailingDraftRow();
         }
-
-        function addWhiteboardItem() {
-            const text = String(inputEl.value || '').trim();
-            if (!text) {
-                inputEl.focus();
-                return;
-            }
-
-            const nextItems = [
-                ...getWhiteboardItems(),
-                {
-                    id: `whiteboard-${Date.now()}-${Math.round(Math.random() * 10000)}`,
-                    text,
-                    createdAt: Date.now()
-                }
-            ];
-            setWhiteboardItems(nextItems);
-            inputEl.value = '';
-            renderWhiteboard();
-        }
-
-        addButton.addEventListener('click', addWhiteboardItem);
-        inputEl.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                event.preventDefault();
-                addWhiteboardItem();
-            }
-        });
 
         window.addEventListener('dashboard-data-updated', renderWhiteboard);
         window.addEventListener('storage', renderWhiteboard);
