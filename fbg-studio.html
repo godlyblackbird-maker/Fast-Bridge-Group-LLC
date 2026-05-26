@@ -1611,6 +1611,13 @@
                 '1280x720': { width: 1280, height: 720, label: '1280 x 720' },
                 '854x480': { width: 854, height: 480, label: '854 x 480' }
             };
+            const RECORDING_VIDEO_BITRATE_PRESETS = {
+                '1920x1080': 14000000,
+                '1280x720': 8000000,
+                '854x480': 4200000
+            };
+            const RECORDING_AUDIO_BITRATE = 192000;
+            const RECORDING_FRAME_RATE = 30;
 
             function clamp(value, min, max) {
                 return Math.min(Math.max(value, min), max);
@@ -2348,10 +2355,21 @@
                 try {
                     setSourceWarning('');
                     const stream = await navigator.mediaDevices.getDisplayMedia({
-                        video: { frameRate: 30 },
+                        video: {
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            frameRate: { ideal: RECORDING_FRAME_RATE, max: 60 }
+                        },
                         audio: true
                     }).catch(async () => {
-                        return navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false });
+                        return navigator.mediaDevices.getDisplayMedia({
+                            video: {
+                                width: { ideal: 1920 },
+                                height: { ideal: 1080 },
+                                frameRate: { ideal: RECORDING_FRAME_RATE, max: 60 }
+                            },
+                            audio: false
+                        });
                     });
 
                     stopStream(state.screenStream);
@@ -2381,7 +2399,14 @@
             async function startCamera() {
                 try {
                     setSourceWarning('');
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            frameRate: { ideal: RECORDING_FRAME_RATE, max: 60 }
+                        },
+                        audio: false
+                    });
                     stopStream(state.cameraStream);
                     state.cameraStream = stream;
                     await attachVideoStream(cameraVideo, stream);
@@ -2436,18 +2461,7 @@
             }
 
             function buildRecordingStream() {
-                let videoTrack = null;
-                const layout = layoutSelect ? layoutSelect.value : 'screen-camera';
-
-                if (state.screenStream && (!state.cameraStream || layout === 'screen-only')) {
-                    const screenTrack = state.screenStream.getVideoTracks()[0];
-                    videoTrack = screenTrack ? screenTrack.clone() : null;
-                } else if (state.cameraStream && (!state.screenStream || layout === 'camera-only')) {
-                    const cameraTrack = state.cameraStream.getVideoTracks()[0];
-                    videoTrack = cameraTrack ? cameraTrack.clone() : null;
-                } else {
-                    videoTrack = previewCanvas.captureStream(30).getVideoTracks()[0] || null;
-                }
+                const videoTrack = previewCanvas.captureStream(RECORDING_FRAME_RATE).getVideoTracks()[0] || null;
 
                 if (!videoTrack) {
                     throw new Error('No video source is available for recording.');
@@ -2482,6 +2496,22 @@
                 }
 
                 return new MediaStream(tracks);
+            }
+
+            function buildRecorderOptions(mimeType) {
+                const resolutionKey = recordingResolutionSelect ? recordingResolutionSelect.value : '1920x1080';
+                const videoBitsPerSecond = RECORDING_VIDEO_BITRATE_PRESETS[resolutionKey] || RECORDING_VIDEO_BITRATE_PRESETS['1920x1080'];
+                const options = {
+                    videoBitsPerSecond: videoBitsPerSecond,
+                    audioBitsPerSecond: RECORDING_AUDIO_BITRATE,
+                    bitsPerSecond: videoBitsPerSecond + RECORDING_AUDIO_BITRATE
+                };
+
+                if (mimeType) {
+                    options.mimeType = mimeType;
+                }
+
+                return options;
             }
 
             function resetAudioMix() {
@@ -2698,14 +2728,27 @@
                     setRecordingWarning('');
                     resetAudioMix();
 
+                    // Make sure the recorder always uses the selected canvas output resolution.
+                    applyRecordingResolution();
+                    const selectedPreset = getRecordingResolutionPreset();
+                    if (previewCanvas.width !== selectedPreset.width || previewCanvas.height !== selectedPreset.height) {
+                        throw new Error(`Recording resolution is not locked to ${selectedPreset.label}.`);
+                    }
+
                     const startedAt = Date.now();
                     const sessionId = createRecordingSessionId();
                     const stream = buildRecordingStream();
                     const mimeType = getRecordingMimeType();
+                    const recorderOptions = buildRecorderOptions(mimeType);
 
                     state.recordedChunks = [];
                     state.outputStream = stream;
-                    state.recorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
+                    try {
+                        state.recorder = new MediaRecorder(stream, recorderOptions);
+                    } catch (recorderOptionsError) {
+                        const mimeOnlyOptions = mimeType ? { mimeType: mimeType } : undefined;
+                        state.recorder = mimeOnlyOptions ? new MediaRecorder(stream, mimeOnlyOptions) : new MediaRecorder(stream);
+                    }
                     state.recorder.addEventListener('dataavailable', (event) => {
                         if (event.data && event.data.size > 0) {
                             state.recordedChunks.push(event.data);

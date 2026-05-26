@@ -1223,10 +1223,32 @@
             gap: 12px;
         }
 
+        .messages-chat-actions-info {
+            display: grid;
+            gap: 2px;
+            min-width: 0;
+        }
+
         .messages-chat-status {
             font-size: 13px;
             color: #6b7280;
             min-height: 20px;
+        }
+
+        .messages-chat-char-count {
+            min-height: 16px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            color: #6b7280;
+        }
+
+        .messages-chat-char-count.is-warning {
+            color: #ca8a04;
+        }
+
+        .messages-chat-char-count.is-over {
+            color: #dc2626;
         }
 
         #messages-chat-send {
@@ -1590,7 +1612,10 @@
                             </div>
                             <input id="messages-chat-attachment-input" type="file" hidden multiple accept="*/*">
                             <div class="messages-chat-actions">
-                                <div id="messages-chat-status" class="messages-chat-status"></div>
+                                <div class="messages-chat-actions-info">
+                                    <div id="messages-chat-status" class="messages-chat-status"></div>
+                                    <div id="messages-chat-char-count" class="messages-chat-char-count" aria-live="polite">0/160</div>
+                                </div>
                                 <button id="messages-chat-send" type="submit" class="card-btn active" aria-label="Send message" title="Send message" disabled>
                                     <svg viewBox="0 0 24 24" aria-hidden="true">
                                         <path d="M4 20L20 12L4 4L4 10L15 12L4 14Z"></path>
@@ -1655,6 +1680,7 @@
             const editingCancel = document.getElementById('messages-editing-cancel');
             const clearConversationButton = document.getElementById('messages-chat-clear');
             const status = document.getElementById('messages-chat-status');
+            const charCount = document.getElementById('messages-chat-char-count');
             const pendingShare = document.getElementById('messages-pending-share');
             const pendingShareTitle = document.getElementById('messages-pending-share-title');
             const pendingShareMeta = document.getElementById('messages-pending-share-meta');
@@ -1671,6 +1697,8 @@
                 minute: '2-digit'
             });
             const MESSAGE_REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+            const MESSAGE_CHARACTER_WARNING = 80;
+            const MESSAGE_CHARACTER_LIMIT = 160;
             const ISAAC_PREVIEW_USER_ID = 900001;
             const ISAAC_PREVIEW_FALLBACK_REACTION_USER_ID = 900099;
             const ISAAC_PREVIEW_ALLOWED_EMAILS = new Set([
@@ -2129,7 +2157,10 @@
                 if (sendButton) {
                     sendButton.setAttribute('aria-label', editingMessageState ? 'Save edited message' : 'Send message');
                     sendButton.setAttribute('title', editingMessageState ? 'Save edited message' : 'Send message');
+                    sendButton.disabled = !selectedUserId || isComposerOverCharacterLimit();
                 }
+
+                updateComposerCharacterUi();
             }
 
             function cancelMessageEdit(options) {
@@ -2690,6 +2721,24 @@
                 status.style.color = isError ? 'var(--danger)' : 'var(--text-secondary)';
             }
 
+            function getComposerCharacterCount() {
+                return input ? String(input.value || '').length : 0;
+            }
+
+            function isComposerOverCharacterLimit() {
+                return getComposerCharacterCount() > MESSAGE_CHARACTER_LIMIT;
+            }
+
+            function updateComposerCharacterUi() {
+                const characterCount = getComposerCharacterCount();
+
+                if (charCount) {
+                    charCount.textContent = `${characterCount}/${MESSAGE_CHARACTER_LIMIT}`;
+                    charCount.classList.toggle('is-warning', characterCount >= MESSAGE_CHARACTER_WARNING && characterCount <= MESSAGE_CHARACTER_LIMIT);
+                    charCount.classList.toggle('is-over', characterCount > MESSAGE_CHARACTER_LIMIT);
+                }
+            }
+
             function setComposerEnabled(enabled) {
                 const nextEnabled = Boolean(enabled);
                 if (input) {
@@ -3008,8 +3057,15 @@
                 const isEditing = Boolean(editingMessageState && editingMessageState.id);
                 const hadPendingProperty = Boolean(pendingSharedProperty);
                 const hasPendingAttachments = pendingAttachmentItems.length > 0;
-                const noteBody = String(input.value || '').trim();
+                const noteBodyRaw = String(input.value || '');
+                const noteBody = noteBodyRaw.trim();
                 let body = noteBody;
+
+                if (noteBodyRaw.length > MESSAGE_CHARACTER_LIMIT) {
+                    setChatStatus(`Message is ${noteBodyRaw.length} characters. Keep it at 160 or less.`, true);
+                    updateComposerModeUi();
+                    return;
+                }
 
                 if (isEditing) {
                     body = buildEditedMessageBody(editingMessageState.message, noteBody);
@@ -3108,6 +3164,10 @@
             }
 
             if (input) {
+                input.addEventListener('input', () => {
+                    updateComposerModeUi();
+                });
+
                 input.addEventListener('keydown', (event) => {
                     if (event.key === 'Enter' && !event.shiftKey) {
                         event.preventDefault();
