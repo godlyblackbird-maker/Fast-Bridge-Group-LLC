@@ -751,7 +751,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       loginVersionLabel.textContent = `Version v${version}`;
     } catch (error) {
-      loginVersionLabel.textContent = 'Version v1.5.1';
+      loginVersionLabel.textContent = 'Version v1.5.2';
     }
   }
 

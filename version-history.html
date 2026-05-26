@@ -798,16 +798,16 @@
                 <h1>What changed, what shipped, what got sharper.</h1>
                 <p>Clean release notes for FAST BRIDGE GROUP. No clutter, no hunting. Just the latest product changes, visual polish, and workflow upgrades in one place.</p>
                 <div class="version-history-highlights" aria-label="Release highlights">
-                    <span>Newest build: 1.5.1</span>
-                    <span>Shared menu sync</span>
-                    <span>Role-based locked tabs</span>
-                    <span>Settings access guards</span>
+                    <span>Newest build: 1.5.2</span>
+                    <span>Auth hardening</span>
+                    <span>Production secret safety</span>
+                    <span>Employee tracker polish</span>
                 </div>
             </div>
             <div class="version-history-hero-side" aria-label="Version history summary">
                 <div class="version-history-stat">
-                    <strong>34</strong>
-                    <span>Recent tracked releases on this page, from 1.1.8 through 1.5.1, including the full 1.2.3 to 1.5.1 release sequence.</span>
+                    <strong>35</strong>
+                    <span>Recent tracked releases on this page, from 1.1.8 through 1.5.2, including the full 1.2.3 to 1.5.2 release sequence.</span>
                 </div>
                 <div class="version-history-stat">
                     <strong>Fast</strong>
@@ -819,24 +819,24 @@
         <section class="version-history-featured" aria-label="Latest version highlight">
             <div class="version-history-featured-copy">
                 <div class="version-history-featured-label">Latest Release</div>
-                <h2>Version 1.5.1</h2>
-                <p>This release tightens the shared FAST workspace by syncing the main menu across pages, expanding role-aware lock states for basic and premium accounts, and hardening Settings so locked tabs and locked controls behave consistently instead of leaking through.</p>
+                <h2>Version 1.5.2</h2>
+                <p>This release focuses on security hardening and safer admin workflows by tightening production auth startup behavior, improving protected-session handling, and polishing the Employee Tracker so edits and status controls feel more stable during live admin use.</p>
                 <div class="version-history-meta">
-                    <span>May 18, 2026</span>
-                    <span>Shared menu sync</span>
-                    <span>Role locks</span>
-                    <span>Settings access guard</span>
-                    <span>Version 1.5.1</span>
+                    <span>May 25, 2026</span>
+                    <span>Security hardening</span>
+                    <span>Auth startup safety</span>
+                    <span>Employee tracker polish</span>
+                    <span>Version 1.5.2</span>
                 </div>
             </div>
             <div class="version-history-featured-list">
                 <h3>Top changes</h3>
                 <ul>
-                    <li>Unified the dashboard-style main menu across the admin and workspace pages so duplicate menu variants, repeated grouping bugs, and footer duplication stop reappearing page by page.</li>
-                    <li>Expanded role-aware lock handling so basic users now see consistent locked states across premium-only workspace links, with blocked direct page access and a shared upgrade tooltip flow.</li>
-                    <li>Locked Admin Controls correctly for both basic and premium accounts, including sidebar lock badges, blocked clicks, and direct-page protection where appropriate.</li>
-                    <li>Hardened Settings for basic users by locking Accent Glow, Smoke Cursor On All Themes, and Cursor Lab so those controls and tabs no longer remain usable behind a visual lock.</li>
-                    <li>Added built-in test bypass accounts for both a basic test user and a premium test user so role-specific access rules can be verified faster from the login screen.</li>
+                    <li>Hardened production auth startup so the app no longer fails deployment when `JWT_SECRET` is missing, while still avoiding weak default secrets in production.</li>
+                    <li>Added safer persistent JWT secret handling for production environments so protected sessions can survive restarts without falling back to insecure defaults.</li>
+                    <li>Improved login and bypass-session support around admin workflows so protected pages and auth-aware account tools behave more consistently.</li>
+                    <li>Refined the Employee Tracker spreadsheet with clearer status rendering, stronger neon visibility, row delete controls, and less disruptive save timing while editing.</li>
+                    <li>Polished shared admin sheet behavior so status controls and hover actions feel more stable during live updates.</li>
                 </ul>
             </div>
         </section>
@@ -848,6 +848,23 @@
             </div>
 
             <div class="version-history-grid">
+                <article class="version-card">
+                    <div class="version-card-head">
+                        <div>
+                            <h2>Version 1.5.1</h2>
+                            <span class="version-date">May 18, 2026</span>
+                        </div>
+                        <span class="version-chip">1.5.1</span>
+                    </div>
+                    <ul>
+                        <li>Unified the dashboard-style main menu across the admin and workspace pages so duplicate menu variants, repeated grouping bugs, and footer duplication stop reappearing page by page.</li>
+                        <li>Expanded role-aware lock handling so basic users now see consistent locked states across premium-only workspace links, with blocked direct page access and a shared upgrade tooltip flow.</li>
+                        <li>Locked Admin Controls correctly for both basic and premium accounts, including sidebar lock badges, blocked clicks, and direct-page protection where appropriate.</li>
+                        <li>Hardened Settings for basic users by locking Accent Glow, Smoke Cursor On All Themes, and Cursor Lab so those controls and tabs no longer remain usable behind a visual lock.</li>
+                        <li>Added built-in test bypass accounts for both a basic test user and a premium test user so role-specific access rules can be verified faster from the login screen.</li>
+                    </ul>
+                </article>
+
                 <article class="version-card">
                     <div class="version-card-head">
                         <div>
