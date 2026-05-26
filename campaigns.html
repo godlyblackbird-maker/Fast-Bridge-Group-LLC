@@ -5768,12 +5768,6 @@
             }
 
             async function copyNoRepliesFollowUpTemplate() {
-                const conversation = getPrimaryNoRepliesConversation();
-                if (!conversation) {
-                    campaignReplyStatus.textContent = 'Choose a no-reply Twilio thread first.';
-                    return;
-                }
-
                 openCampaignNoRepliesTemplateModal();
             }
 
