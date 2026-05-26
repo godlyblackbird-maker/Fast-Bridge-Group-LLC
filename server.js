@@ -44,6 +44,39 @@ function isUnsafeJwtSecret(secret) {
   return !normalizedSecret || normalizedSecret === DEFAULT_JWT_SECRET;
 }
 
+function resolvePersistedJwtSecretFilePath() {
+  const persistentRoot = resolvePersistentStorageRoot();
+  if (!persistentRoot) {
+    return '';
+  }
+
+  return path.join(persistentRoot, 'auth', 'jwt-secret.txt');
+}
+
+function readOrCreatePersistedJwtSecret() {
+  const secretFilePath = resolvePersistedJwtSecretFilePath();
+  if (!secretFilePath) {
+    return '';
+  }
+
+  try {
+    if (fs.existsSync(secretFilePath)) {
+      const existingSecret = String(fs.readFileSync(secretFilePath, 'utf8') || '').trim();
+      if (!isUnsafeJwtSecret(existingSecret)) {
+        return existingSecret;
+      }
+    }
+
+    fs.mkdirSync(path.dirname(secretFilePath), { recursive: true });
+    const generatedSecret = crypto.randomBytes(48).toString('hex');
+    fs.writeFileSync(secretFilePath, `${generatedSecret}\n`, { encoding: 'utf8', mode: 0o600 });
+    return generatedSecret;
+  } catch (error) {
+    console.warn('Unable to initialize persistent JWT secret storage:', error.message || error);
+    return '';
+  }
+}
+
 function resolveJwtSecret() {
   const configuredSecret = String(process.env.JWT_SECRET || '').trim();
   if (!isUnsafeJwtSecret(configuredSecret)) {
@@ -51,7 +84,13 @@ function resolveJwtSecret() {
   }
 
   if (String(process.env.NODE_ENV || '').trim().toLowerCase() === 'production') {
-    throw new Error('JWT_SECRET must be set to a strong value in production.');
+    const persistedSecret = readOrCreatePersistedJwtSecret();
+    if (!isUnsafeJwtSecret(persistedSecret)) {
+      console.warn('JWT_SECRET is not configured. Using a generated secret stored on persistent disk for production.');
+      return persistedSecret;
+    }
+
+    throw new Error('JWT_SECRET must be set to a strong value in production or persistent storage must be available.');
   }
 
   const generatedSecret = crypto.randomBytes(48).toString('hex');
