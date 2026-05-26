@@ -27810,6 +27810,7 @@ function initNavbarDateTime() {
                             resolve({
                                 lat: Number(panoLatLng.lat()),
                                 lng: Number(panoLatLng.lng()),
+                                panoId: String(data.location.pano || '').trim() || null,
                                 description: String(data.location.description || '').trim()
                             });
                         });
@@ -27867,6 +27868,7 @@ function initNavbarDateTime() {
             return {
                 targetLocation,
                 panoLocation,
+                panoId: panoMatch && panoMatch.panoId ? panoMatch.panoId : null,
                 panoMatch,
                 heading: getStreetViewHeading(panoLocation, targetLocation),
                 pitch: 8
@@ -29698,7 +29700,11 @@ function initNavbarDateTime() {
                 const streetViewDisplay = await resolveStreetViewDisplayTarget(streetViewTarget);
                 const panoLocation = streetViewDisplay ? streetViewDisplay.panoLocation : streetViewTarget;
                 const heading = streetViewDisplay ? streetViewDisplay.heading : 34;
-                panoramaInstance.setPosition(panoLocation);
+                if (streetViewDisplay && streetViewDisplay.panoId) {
+                    panoramaInstance.setPano(streetViewDisplay.panoId);
+                } else {
+                    panoramaInstance.setPosition(panoLocation);
+                }
                 panoramaInstance.setPov({
                     heading,
                     pitch: streetViewDisplay ? streetViewDisplay.pitch : 8
@@ -33603,6 +33609,20 @@ function initNavbarDateTime() {
                 saveDraft();
             });
 
+            bodyInput.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' || event.shiftKey) {
+                    return;
+                }
+
+                if (!isOfferEmailBulletContext()) {
+                    return;
+                }
+
+                event.preventDefault();
+                insertOfferEmailBulletLine();
+                saveDraft();
+            });
+
             copySubjectButton.addEventListener('click', async () => {
                 await copyTextValue(subjectInput.value, 'Subject Copied');
             });
@@ -33710,7 +33730,11 @@ function initNavbarDateTime() {
                 toolbarEl.querySelectorAll('[data-command]').forEach(function (btn) {
                     btn.addEventListener('mousedown', function (e) {
                         e.preventDefault();
-                        document.execCommand(btn.dataset.command, false, null);
+                        if (btn.dataset.command === 'insertUnorderedList') {
+                            insertOfferEmailBulletLine();
+                        } else {
+                            document.execCommand(btn.dataset.command, false, null);
+                        }
                         saveDraft();
                     });
                 });
@@ -33731,6 +33755,89 @@ function initNavbarDateTime() {
                 if (bodyInput.contains(range.commonAncestorContainer)) {
                     savedBodySelectionRange = range.cloneRange();
                 }
+            }
+
+            function getOfferEmailCaretRange() {
+                const selection = window.getSelection ? window.getSelection() : null;
+                if (!selection || selection.rangeCount === 0) {
+                    return null;
+                }
+
+                const range = selection.getRangeAt(0);
+                if (!bodyInput.contains(range.commonAncestorContainer)) {
+                    return null;
+                }
+
+                return range;
+            }
+
+            function getOfferEmailCurrentLineText() {
+                const range = getOfferEmailCaretRange();
+                if (!range) {
+                    return '';
+                }
+
+                const lineRange = range.cloneRange();
+                lineRange.selectNodeContents(bodyInput);
+                lineRange.setEnd(range.endContainer, range.endOffset);
+                const text = String(lineRange.toString() || '').replace(/\u00a0/g, ' ');
+                return text.split(/\r?\n/).pop() || '';
+            }
+
+            function isOfferEmailBulletContext() {
+                const range = getOfferEmailCaretRange();
+                if (!range) {
+                    return false;
+                }
+
+                const startContainer = range.startContainer;
+                const caretElement = startContainer && startContainer.nodeType === Node.ELEMENT_NODE
+                    ? startContainer
+                    : startContainer && startContainer.parentElement
+                        ? startContainer.parentElement
+                        : null;
+                if (caretElement && typeof caretElement.closest === 'function' && caretElement.closest('li')) {
+                    return true;
+                }
+
+                return /^•\s*/.test(getOfferEmailCurrentLineText());
+            }
+
+            function insertOfferEmailBulletLine() {
+                const range = getOfferEmailCaretRange();
+                if (!range) {
+                    return false;
+                }
+
+                bodyInput.focus();
+                restoreBodySelectionRange();
+
+                const selection = window.getSelection ? window.getSelection() : null;
+                if (!selection || selection.rangeCount === 0) {
+                    return false;
+                }
+
+                const nextRange = selection.getRangeAt(0);
+                if (!bodyInput.contains(nextRange.commonAncestorContainer)) {
+                    return false;
+                }
+
+                nextRange.deleteContents();
+                const fragment = document.createDocumentFragment();
+                const lineBreak = document.createElement('br');
+                const bulletText = document.createTextNode('• ');
+                fragment.appendChild(lineBreak);
+                fragment.appendChild(bulletText);
+                nextRange.insertNode(fragment);
+
+                const caretRange = document.createRange();
+                caretRange.setStartAfter(bulletText);
+                caretRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(caretRange);
+                captureBodySelectionRange();
+                bodyInput.dataset.userEdited = 'true';
+                return true;
             }
 
             function restoreBodySelectionRange() {

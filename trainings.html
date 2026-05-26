@@ -227,14 +227,14 @@
 
         .training-resources-grid {
             display: grid;
-            gap: 18px;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         }
 
         .training-resource-item {
             display: grid;
-            gap: 14px;
-            padding: 18px;
+            gap: 10px;
+            padding: 14px;
             border-radius: 20px;
             border: 1px solid var(--glass-border);
             background: rgba(255, 255, 255, 0.06);
@@ -244,15 +244,15 @@
         .training-resource-preview {
             display: grid;
             place-items: center;
-            min-height: 220px;
-            padding: 16px;
+            min-height: 140px;
+            padding: 10px;
             border-radius: 18px;
             border: 1px solid var(--glass-border);
             background: rgba(255, 255, 255, 0.08);
         }
 
         .training-resource-preview img {
-            width: min(100%, 220px);
+            width: min(100%, 160px);
             height: auto;
             display: block;
             object-fit: contain;
@@ -263,23 +263,23 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 108px;
-            min-height: 108px;
-            padding: 18px;
-            border-radius: 24px;
+            min-width: 76px;
+            min-height: 76px;
+            padding: 12px;
+            border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.18);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
             color: var(--text-color, #f8fafc);
             font-family: 'Space Mono', monospace;
-            font-size: 20px;
+            font-size: 14px;
             font-weight: 700;
-            letter-spacing: 0.16em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
         }
 
         .training-resource-name {
             margin: 0;
-            font-size: 18px;
+            font-size: 16px;
             line-height: 1.25;
             font-weight: 700;
         }
@@ -287,18 +287,44 @@
         .training-resource-copy {
             margin: 0;
             color: var(--muted-text, rgba(226, 232, 240, 0.74));
-            font-size: 14px;
-            line-height: 1.5;
+            font-size: 13px;
+            line-height: 1.35;
         }
 
         .training-resource-download {
             justify-self: start;
         }
 
+        .training-resource-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .training-resource-actions .training-resource-download {
+            justify-self: auto;
+        }
+
         @media (min-width: 1200px) {
             .training-library-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 align-items: start;
+            }
+
+            .training-resources-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 900px) and (max-width: 1199px) {
+            .training-resources-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 600px) and (max-width: 899px) {
+            .training-resources-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -613,6 +639,19 @@
                     </div>
                 </div>
                 <div class="training-resources-grid">
+                    <article class="training-resource-item">
+                        <div class="training-resource-preview">
+                            <span class="training-resource-file-badge" aria-hidden="true">APP</span>
+                        </div>
+                        <div>
+                            <h3 class="training-resource-name">Phone Link + Link to Windows</h3>
+                            <p class="training-resource-copy">Use Microsoft Phone Link on desktop and Link to Windows on iPhone so calls, texts, notifications, and photos stay connected while working deals and follow-up.</p>
+                        </div>
+                        <div class="training-resource-actions">
+                            <a class="card-btn active training-resource-download" href="https://apps.microsoft.com/detail/9NMPJ99VJBWV" target="_blank" rel="noopener noreferrer">Desktop App (Windows)</a>
+                            <a class="card-btn active training-resource-download" href="https://apps.apple.com/us/app/link-to-windows/id6443686328" target="_blank" rel="noopener noreferrer">Mobile App (iPhone)</a>
+                        </div>
+                    </article>
                     <article class="training-resource-item">
                         <div class="training-resource-preview">
                             <img src="Symbols/colibri-real-estate-logo.svg" alt="Colibri Real Estate logo">
