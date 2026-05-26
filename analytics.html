@@ -203,11 +203,9 @@
             gap: 18px;
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            background:
-                radial-gradient(circle at top left, rgba(255, 245, 205, 0.22), transparent 38%),
-                linear-gradient(180deg, rgba(128, 90, 37, 0.18), rgba(255, 255, 255, 0.08));
-            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(148, 163, 184, 0.38);
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(226, 232, 240, 0.82));
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.72);
             width: 100%;
             max-width: none;
         }
@@ -220,8 +218,13 @@
             bottom: 14px;
             left: 14px;
             border-radius: 22px;
-            background: linear-gradient(180deg, rgba(255, 252, 244, 0.96), rgba(248, 250, 252, 0.92));
-            box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.06);
+            background:
+                linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 45%, rgba(241, 245, 249, 0.98) 100%),
+                radial-gradient(circle at 24% 10%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 42%);
+            box-shadow:
+                inset 0 0 0 2px rgba(100, 116, 139, 0.32),
+                inset 0 2px 6px rgba(255, 255, 255, 0.78),
+                inset 0 -4px 10px rgba(148, 163, 184, 0.22);
             z-index: 0;
         }
 
@@ -239,6 +242,8 @@
         .analytics-whiteboard-header .card-title {
             color: #152238;
             letter-spacing: 0.08em;
+            font-size: clamp(28px, 3.6vw, 42px);
+            font-weight: 900;
         }
 
         .analytics-whiteboard-header .card-subtitle {
@@ -250,12 +255,11 @@
             gap: 14px;
             padding: 18px;
             border-radius: 24px;
-            background:
-                linear-gradient(transparent 31px, rgba(59, 130, 246, 0.12) 32px),
-                linear-gradient(90deg, rgba(251, 113, 133, 0.16) 0, rgba(251, 113, 133, 0.16) 3px, transparent 3px),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
-            background-size: 100% 32px, 32px 100%, 100% 100%;
-            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08), 0 12px 24px rgba(15, 23, 42, 0.08);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(250, 252, 255, 0.98));
+            box-shadow:
+                inset 0 0 0 1px rgba(148, 163, 184, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.92),
+                0 10px 24px rgba(15, 23, 42, 0.08);
             min-height: 220px;
         }
 
@@ -265,6 +269,145 @@
             font-size: 12px;
             color: rgba(22, 32, 51, 0.62);
             font-style: italic;
+        }
+
+        .analytics-whiteboard-year-grid {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 10px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, 0.52) transparent;
+        }
+
+        .analytics-whiteboard-year-grid::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .analytics-whiteboard-year-grid::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .analytics-whiteboard-year-grid::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.52);
+            border-radius: 999px;
+        }
+
+        .analytics-whiteboard-year-card {
+            display: grid;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.34);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.97));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 6px 14px rgba(15, 23, 42, 0.07);
+            position: relative;
+            flex: 0 0 210px;
+        }
+
+        .analytics-whiteboard-year-add {
+            border: 1px dashed rgba(148, 163, 184, 0.56);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(241, 245, 249, 0.9));
+            min-height: 154px;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .analytics-whiteboard-year-add:hover,
+        .analytics-whiteboard-year-add:focus-visible {
+            transform: translateY(-1px);
+            border-color: rgba(59, 130, 246, 0.56);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 10px 18px rgba(15, 23, 42, 0.1);
+            outline: none;
+        }
+
+        .analytics-whiteboard-year-add-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            display: grid;
+            place-items: center;
+            font-size: 28px;
+            font-weight: 900;
+            color: #334155;
+            background: rgba(255, 255, 255, 0.9);
+            margin: 0 auto 8px;
+        }
+
+        .analytics-whiteboard-year-add-text {
+            font-size: 13px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            text-align: center;
+        }
+
+        .analytics-whiteboard-year-delete {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(255, 255, 255, 0.92);
+            color: #475569;
+            font-size: 15px;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-2px);
+            transition: opacity 0.16s ease, transform 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+        }
+
+        .analytics-whiteboard-year-card:hover .analytics-whiteboard-year-delete,
+        .analytics-whiteboard-year-card:focus-within .analytics-whiteboard-year-delete {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .analytics-whiteboard-year-delete:hover,
+        .analytics-whiteboard-year-delete:focus-visible {
+            color: #dc2626;
+            border-color: rgba(220, 38, 38, 0.42);
+            outline: none;
+        }
+
+        .analytics-whiteboard-year-card label {
+            font-size: 15px;
+            font-weight: 800;
+            color: #334155;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .analytics-whiteboard-year-card input {
+            width: 100%;
+            min-height: 48px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.38);
+            background: rgba(255, 255, 255, 0.95);
+            color: #0f172a;
+            font-size: 21px;
+            font-weight: 900;
+            padding: 9px 12px;
+            outline: none;
+        }
+
+        .analytics-whiteboard-year-card input:focus {
+            border-color: rgba(59, 130, 246, 0.55);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
         }
 
         .analytics-whiteboard-list {
@@ -294,13 +437,15 @@
 
         .analytics-whiteboard-item-editor {
             min-width: 0;
-            min-height: 28px;
+            min-height: 46px;
             white-space: pre-wrap;
             word-break: break-word;
-            line-height: 1.6;
-            color: #162033;
+            line-height: 1.45;
+            color: #dc2626;
+            font-size: clamp(28px, 3.8vw, 44px);
+            font-weight: 900;
             position: relative;
-            padding-left: 22px;
+            padding-left: 28px;
             outline: none;
             cursor: text;
         }
@@ -310,8 +455,8 @@
             position: absolute;
             left: 0;
             top: 0.62em;
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 999px;
             background: #22c55e;
             box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
@@ -319,7 +464,7 @@
 
         .analytics-whiteboard-item-editor:empty::after {
             content: attr(data-placeholder);
-            color: rgba(22, 32, 51, 0.42);
+            color: rgba(220, 38, 38, 0.42);
         }
 
         .analytics-whiteboard-item:focus-within {
@@ -746,6 +891,7 @@ https://templatemo.com/tm-607-glass-admin
                         </div>
                     </div>
                     <div class="analytics-whiteboard-surface">
+                        <div class="analytics-whiteboard-year-grid" id="analytics-whiteboard-year-grid"></div>
                         <ul class="analytics-whiteboard-list" id="analytics-whiteboard-list"></ul>
                         <p class="analytics-whiteboard-hint">Press Enter to move to the next bullet point. Empty bullet points stay local until you type into them.</p>
                     </div>

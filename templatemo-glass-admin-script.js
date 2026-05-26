@@ -52,6 +52,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const PROPERTY_SUBMISSIONS_BADGE_STATE_KEY = 'propertySubmissionsBadgeStateByUser';
     const USER_PROPERTY_SUBMISSIONS_KEY = 'userPropertySubmissionsByUser';
     const ANALYTICS_WHITEBOARD_ITEMS_KEY = 'analyticsWhiteboardItemsByUser';
+    const ANALYTICS_WHITEBOARD_YEAR_BOXES_KEY = 'analyticsWhiteboardYearBoxesByUser';
     const ADMIN_CONTROLS_WIDGET_DOCK_ORDER = [
         'admin-announcement',
         'admin-discord-meetings',
@@ -7017,6 +7018,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
     function initAnalyticsWhiteboardWidget() {
         const listEl = document.getElementById('analytics-whiteboard-list');
+        const yearGridEl = document.getElementById('analytics-whiteboard-year-grid');
 
         if (!listEl) {
             return;
@@ -7024,6 +7026,197 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         const workspaceUser = getWorkspaceUserContext();
         let whiteboardSaveTimer = null;
+
+        if (yearGridEl && yearGridEl.dataset.horizontalWheelBound !== 'true') {
+            yearGridEl.dataset.horizontalWheelBound = 'true';
+            yearGridEl.addEventListener('wheel', (event) => {
+                if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+                    return;
+                }
+
+                yearGridEl.scrollLeft += event.deltaY;
+                event.preventDefault();
+            }, { passive: false });
+        }
+
+        function getDefaultYearBoxes() {
+            const currentYear = new Date().getFullYear();
+            return [0, 1, 2, 3].map((offset) => ({
+                year: String(currentYear - offset),
+                amount: ''
+            }));
+        }
+
+        function normalizeYearBoxes(value) {
+            if (!Array.isArray(value)) {
+                return [];
+            }
+
+            return value
+                .map((item) => {
+                    const safeItem = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+                    const year = String(safeItem.year || '').replace(/[^0-9]/g, '').slice(0, 4);
+                    const amount = normalizeYearAmountDigits(safeItem.amount || '');
+                    if (!year) {
+                        return null;
+                    }
+                    return { year, amount };
+                })
+                .filter(Boolean)
+                .slice(0, 8);
+        }
+
+        function normalizeYearAmountDigits(value) {
+            return String(value || '').replace(/[^0-9]/g, '').slice(0, 18);
+        }
+
+        function formatYearAmountDisplay(value) {
+            const digits = normalizeYearAmountDigits(value);
+            if (!digits) {
+                return '';
+            }
+
+            const normalizedDigits = digits.replace(/^0+(?=\d)/, '');
+            return `$${normalizedDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+        }
+
+        function getYearBoxes() {
+            const savedBoxes = normalizeYearBoxes(getUserScopedItems(ANALYTICS_WHITEBOARD_YEAR_BOXES_KEY, workspaceUser.key));
+            if (savedBoxes.length > 0) {
+                return savedBoxes;
+            }
+            return getDefaultYearBoxes();
+        }
+
+        function setYearBoxes(items) {
+            const normalized = normalizeYearBoxes(items);
+            setUserScopedItems(ANALYTICS_WHITEBOARD_YEAR_BOXES_KEY, workspaceUser.key, normalized);
+        }
+
+        function collectYearBoxesFromDom() {
+            if (!yearGridEl) {
+                return [];
+            }
+
+            return Array.from(yearGridEl.querySelectorAll('.analytics-whiteboard-year-card'))
+                .map((card) => {
+                    const yearInput = card.querySelector('input[data-field="year"]');
+                    const amountInput = card.querySelector('input[data-field="amount"]');
+                    const year = String(yearInput && yearInput.value || '').replace(/[^0-9]/g, '').slice(0, 4);
+                    const amount = normalizeYearAmountDigits(amountInput && amountInput.value || '');
+                    if (!year) {
+                        return null;
+                    }
+                    return { year, amount };
+                })
+                .filter(Boolean);
+        }
+
+        function renderYearBoxes(options = {}) {
+            if (!yearGridEl) {
+                return;
+            }
+
+            const shouldForceRender = options && options.force === true;
+            if (!shouldForceRender && yearGridEl.contains(document.activeElement)) {
+                return;
+            }
+
+            const items = getYearBoxes();
+            yearGridEl.innerHTML = '';
+            items.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'analytics-whiteboard-year-card';
+
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'analytics-whiteboard-year-delete';
+                deleteButton.setAttribute('aria-label', `Delete year box ${index + 1}`);
+                deleteButton.title = 'Delete this box';
+                deleteButton.textContent = '×';
+
+                const label = document.createElement('label');
+                const yearInputId = `analytics-whiteboard-year-${index}`;
+                label.setAttribute('for', yearInputId);
+                label.textContent = 'Year';
+
+                const yearInput = document.createElement('input');
+                yearInput.id = yearInputId;
+                yearInput.type = 'text';
+                yearInput.inputMode = 'numeric';
+                yearInput.maxLength = 4;
+                yearInput.value = String(item.year || '');
+                yearInput.setAttribute('data-field', 'year');
+                yearInput.setAttribute('aria-label', `Year box ${index + 1}`);
+
+                const amountInput = document.createElement('input');
+                amountInput.type = 'text';
+                amountInput.inputMode = 'numeric';
+                amountInput.maxLength = 24;
+                amountInput.value = formatYearAmountDisplay(item.amount || '');
+                amountInput.setAttribute('data-field', 'amount');
+                amountInput.setAttribute('aria-label', `Amount made in year box ${index + 1}`);
+                amountInput.placeholder = 'Amount made';
+
+                const saveInputs = () => {
+                    setYearBoxes(collectYearBoxesFromDom());
+                };
+
+                yearInput.addEventListener('input', () => {
+                    yearInput.value = yearInput.value.replace(/[^0-9]/g, '').slice(0, 4);
+                    saveInputs();
+                });
+                amountInput.addEventListener('input', () => {
+                    const digits = normalizeYearAmountDigits(amountInput.value);
+                    amountInput.value = formatYearAmountDisplay(digits);
+                    saveInputs();
+                });
+                amountInput.addEventListener('blur', () => {
+                    amountInput.value = formatYearAmountDisplay(amountInput.value);
+                });
+
+                deleteButton.addEventListener('click', () => {
+                    card.remove();
+                    setYearBoxes(collectYearBoxesFromDom());
+                    renderYearBoxes({ force: true });
+                });
+
+                card.append(deleteButton, label, yearInput, amountInput);
+                yearGridEl.appendChild(card);
+            });
+
+            const addCard = document.createElement('button');
+            addCard.type = 'button';
+            addCard.className = 'analytics-whiteboard-year-card analytics-whiteboard-year-add';
+            addCard.setAttribute('aria-label', 'Add another year box');
+            addCard.innerHTML = `
+                <span class="analytics-whiteboard-year-add-icon" aria-hidden="true">+</span>
+                <span class="analytics-whiteboard-year-add-text">Add Year</span>
+            `;
+            addCard.addEventListener('click', () => {
+                const currentItems = collectYearBoxesFromDom();
+                const parsedYears = currentItems
+                    .map((entry) => Number(entry && entry.year))
+                    .filter((value) => Number.isFinite(value));
+                const nextYear = parsedYears.length > 0
+                    ? Math.max(Math.min(...parsedYears) - 1, 1900)
+                    : new Date().getFullYear();
+
+                currentItems.push({ year: String(nextYear), amount: '' });
+                setYearBoxes(currentItems);
+                renderYearBoxes({ force: true });
+                window.requestAnimationFrame(() => {
+                    const cards = Array.from(yearGridEl.querySelectorAll('.analytics-whiteboard-year-card'));
+                    const newCard = cards[cards.length - 2] || null;
+                    const yearInput = newCard ? newCard.querySelector('input[data-field="year"]') : null;
+                    if (yearInput) {
+                        yearInput.focus();
+                        yearGridEl.scrollLeft = yearGridEl.scrollWidth;
+                    }
+                });
+            });
+            yearGridEl.appendChild(addCard);
+        }
 
         function getWhiteboardItems() {
             return getUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, workspaceUser.key)
@@ -7134,7 +7327,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             editor.setAttribute('role', 'textbox');
             editor.setAttribute('aria-multiline', 'false');
             editor.setAttribute('aria-label', 'White board bullet point');
-            editor.setAttribute('data-placeholder', 'Type a goal, reminder, or vision-board bullet point...');
+            editor.setAttribute('data-placeholder', '');
             editor.textContent = item.text || '';
 
             const removeButton = document.createElement('button');
@@ -7144,13 +7337,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             removeButton.textContent = '×';
             removeButton.addEventListener('click', () => {
                 listItem.remove();
-                cleanupWhiteboardDrafts();
                 scheduleWhiteboardSave();
             });
 
             editor.addEventListener('input', () => {
                 syncRowState(listItem);
-                ensureTrailingDraftRow();
                 scheduleWhiteboardSave();
             });
 
@@ -7160,7 +7351,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 }
 
                 event.preventDefault();
-                syncRowState(listItem);
+                const snapshot = syncRowState(listItem);
+                if (!snapshot.text) {
+                    return;
+                }
                 let nextRow = listItem.nextElementSibling;
                 if (!nextRow) {
                     nextRow = createWhiteboardRow();
@@ -7174,7 +7368,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             editor.addEventListener('blur', () => {
                 const snapshot = syncRowState(listItem);
                 if (!snapshot.text) {
-                    cleanupWhiteboardDrafts();
+                    listItem.remove();
                 }
                 scheduleWhiteboardSave();
             });
@@ -7184,35 +7378,15 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             return listItem;
         }
 
-        function ensureTrailingDraftRow() {
-            const rows = Array.from(listEl.querySelectorAll('.analytics-whiteboard-item'));
-            const lastRow = rows[rows.length - 1];
-            const lastEditor = getRowEditor(lastRow);
-            const lastText = normalizeWhiteboardText(lastEditor ? lastEditor.textContent : '');
-            if (!lastRow || lastText) {
-                listEl.appendChild(createWhiteboardRow());
-            }
-        }
-
         function cleanupWhiteboardDrafts(preferredRow = null) {
             const rows = Array.from(listEl.querySelectorAll('.analytics-whiteboard-item'));
             const emptyRows = rows.filter((row) => !normalizeWhiteboardText(getRowEditor(row) ? getRowEditor(row).textContent : ''));
-
-            if (!rows.length) {
-                listEl.appendChild(createWhiteboardRow());
-                return;
-            }
-
-            const fallbackRow = emptyRows[emptyRows.length - 1] || null;
-            const rowToKeep = preferredRow && listEl.contains(preferredRow) ? preferredRow : fallbackRow;
-
             emptyRows.forEach((row) => {
-                if (row !== rowToKeep) {
-                    row.remove();
+                if (preferredRow && row === preferredRow) {
+                    return;
                 }
+                row.remove();
             });
-
-            ensureTrailingDraftRow();
         }
 
         function renderWhiteboard() {
@@ -7225,11 +7399,13 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             items.forEach((item) => {
                 listEl.appendChild(createWhiteboardRow(item));
             });
-            ensureTrailingDraftRow();
         }
 
         window.addEventListener('dashboard-data-updated', renderWhiteboard);
         window.addEventListener('storage', renderWhiteboard);
+        window.addEventListener('dashboard-data-updated', renderYearBoxes);
+        window.addEventListener('storage', renderYearBoxes);
+        renderYearBoxes();
         renderWhiteboard();
     }
 
