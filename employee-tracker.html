@@ -709,6 +709,10 @@
                 const label = document.createElement('span');
                 label.className = 'employee-sheet-status-label';
 
+                const caret = document.createElement('span');
+                caret.className = 'employee-sheet-status-caret';
+                caret.setAttribute('aria-hidden', 'true');
+
                 const select = document.createElement('select');
                 select.className = 'employee-sheet-status-select';
                 EMPLOYMENT_STATUS_OPTIONS.forEach((status) => {
@@ -719,20 +723,16 @@
                     select.appendChild(option);
                 });
 
+                td.appendChild(label);
+                td.appendChild(select);
+                td.appendChild(caret);
+
                 select.value = normalizeEmploymentStatus(value);
                 applyStatusSelectStyle(select);
                 select.addEventListener('change', () => {
                     applyStatusSelectStyle(select);
                     scheduleSaveRows();
                 });
-
-                const caret = document.createElement('span');
-                caret.className = 'employee-sheet-status-caret';
-                caret.setAttribute('aria-hidden', 'true');
-
-                td.appendChild(label);
-                td.appendChild(select);
-                td.appendChild(caret);
                 return td;
             }
 
