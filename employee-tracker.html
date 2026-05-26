@@ -226,56 +226,120 @@
         }
 
         .employee-sheet-status-cell {
-            min-width: 180px;
-        }
-
-        .employee-sheet-status-select {
-            width: 100%;
+            position: relative;
+            min-width: 232px;
             min-height: 42px;
             border: 1px solid var(--employee-sheet-select-border);
             border-radius: 14px;
             background: var(--employee-sheet-select-bg);
-            color: var(--text-primary);
-            padding: 10px 12px;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .employee-sheet-status-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            min-height: 42px;
+            border: 0;
+            border-radius: 14px;
+            background: transparent;
+            color: transparent;
+            caret-color: transparent;
+            padding: 10px 38px 10px 12px;
             font: inherit;
             font-weight: 700;
             letter-spacing: 0.02em;
             outline: none;
-            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
-            backdrop-filter: blur(14px);
+            transition: opacity 0.18s ease;
+            backdrop-filter: none;
+            text-shadow: 0 0 0 transparent;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
         }
 
-        .employee-sheet-status-select:focus {
+        .employee-sheet-status-cell:focus-within {
             border-color: rgba(var(--accent-rgb, 5, 150, 105), 0.45);
             box-shadow: 0 0 0 3px rgba(var(--accent-rgb, 5, 150, 105), 0.15);
         }
 
+        .employee-sheet-status-label {
+            position: absolute;
+            inset: 0 32px 0 12px;
+            display: flex;
+            align-items: center;
+            font: inherit;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 1;
+        }
+
+        .employee-sheet-status-caret {
+            position: absolute;
+            top: 50%;
+            right: 14px;
+            width: 10px;
+            height: 10px;
+            border-right: 2px solid currentColor;
+            border-bottom: 2px solid currentColor;
+            transform: translateY(-60%) rotate(45deg);
+            pointer-events: none;
+            opacity: 0.72;
+            z-index: 1;
+        }
+
+        .employee-sheet-status-select::-ms-expand {
+            display: none;
+        }
+
         .employee-sheet-status-select.is-active {
             color: #15803d;
+        }
+
+        .employee-sheet-status-cell.is-active {
             background: rgba(21, 128, 61, 0.12);
             border-color: rgba(21, 128, 61, 0.35);
         }
 
         .employee-sheet-status-select.is-pending {
             color: #ea580c;
+        }
+
+        .employee-sheet-status-cell.is-pending {
             background: rgba(234, 88, 12, 0.12);
             border-color: rgba(234, 88, 12, 0.35);
         }
 
         .employee-sheet-status-select.is-onboarding {
             color: #ca8a04;
+        }
+
+        .employee-sheet-status-cell.is-onboarding {
             background: rgba(202, 138, 4, 0.12);
             border-color: rgba(202, 138, 4, 0.35);
         }
 
         .employee-sheet-status-select.is-training {
             color: #0f766e;
+        }
+
+        .employee-sheet-status-cell.is-training {
             background: rgba(15, 118, 110, 0.12);
             border-color: rgba(15, 118, 110, 0.35);
         }
 
         .employee-sheet-status-select.is-terminated {
             color: #dc2626;
+        }
+
+        .employee-sheet-status-cell.is-terminated {
             background: rgba(220, 38, 38, 0.12);
             border-color: rgba(220, 38, 38, 0.35);
         }
@@ -476,6 +540,14 @@
                 'TERMINATED'
             ];
 
+            const EMPLOYMENT_STATUS_STYLES = Object.freeze({
+                ACTIVE: Object.freeze({ color: '#15803d', backgroundColor: 'rgba(21, 128, 61, 0.12)', borderColor: 'rgba(21, 128, 61, 0.35)' }),
+                PENDING: Object.freeze({ color: '#ea580c', backgroundColor: 'rgba(234, 88, 12, 0.12)', borderColor: 'rgba(234, 88, 12, 0.35)' }),
+                ONBOARDING: Object.freeze({ color: '#ca8a04', backgroundColor: 'rgba(202, 138, 4, 0.12)', borderColor: 'rgba(202, 138, 4, 0.35)' }),
+                TRAINING: Object.freeze({ color: '#0f766e', backgroundColor: 'rgba(15, 118, 110, 0.12)', borderColor: 'rgba(15, 118, 110, 0.35)' }),
+                TERMINATED: Object.freeze({ color: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.12)', borderColor: 'rgba(220, 38, 38, 0.35)' })
+            });
+
             function safeReadJson(key) {
                 try {
                     return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || '{}');
@@ -585,19 +657,48 @@
                 }
 
                 const statusValue = normalizeEmploymentStatus(select.value);
+                const styleConfig = EMPLOYMENT_STATUS_STYLES[statusValue] || EMPLOYMENT_STATUS_STYLES.ACTIVE;
+                const container = select.parentElement;
+                const label = container ? container.querySelector('.employee-sheet-status-label') : null;
+                const caret = container ? container.querySelector('.employee-sheet-status-caret') : null;
                 select.value = statusValue;
                 select.classList.remove('is-active', 'is-pending', 'is-onboarding', 'is-training', 'is-terminated');
+                if (container) {
+                    container.classList.remove('is-active', 'is-pending', 'is-onboarding', 'is-training', 'is-terminated');
+                }
+                if (label) {
+                    label.textContent = statusValue;
+                    label.style.color = styleConfig.color;
+                }
+                if (caret) {
+                    caret.style.color = styleConfig.color;
+                }
 
                 if (statusValue === 'ACTIVE') {
                     select.classList.add('is-active');
+                    if (container) {
+                        container.classList.add('is-active');
+                    }
                 } else if (statusValue === 'PENDING') {
                     select.classList.add('is-pending');
+                    if (container) {
+                        container.classList.add('is-pending');
+                    }
                 } else if (statusValue === 'ONBOARDING') {
                     select.classList.add('is-onboarding');
+                    if (container) {
+                        container.classList.add('is-onboarding');
+                    }
                 } else if (statusValue === 'TRAINING') {
                     select.classList.add('is-training');
+                    if (container) {
+                        container.classList.add('is-training');
+                    }
                 } else if (statusValue === 'TERMINATED') {
                     select.classList.add('is-terminated');
+                    if (container) {
+                        container.classList.add('is-terminated');
+                    }
                 }
             }
 
@@ -605,12 +706,16 @@
                 const td = document.createElement('td');
                 td.className = 'employee-sheet-status-cell';
 
+                const label = document.createElement('span');
+                label.className = 'employee-sheet-status-label';
+
                 const select = document.createElement('select');
                 select.className = 'employee-sheet-status-select';
                 EMPLOYMENT_STATUS_OPTIONS.forEach((status) => {
                     const option = document.createElement('option');
                     option.value = status;
                     option.textContent = status;
+                    option.style.color = EMPLOYMENT_STATUS_STYLES[status].color;
                     select.appendChild(option);
                 });
 
@@ -621,7 +726,13 @@
                     scheduleSaveRows();
                 });
 
+                const caret = document.createElement('span');
+                caret.className = 'employee-sheet-status-caret';
+                caret.setAttribute('aria-hidden', 'true');
+
+                td.appendChild(label);
                 td.appendChild(select);
+                td.appendChild(caret);
                 return td;
             }
 
