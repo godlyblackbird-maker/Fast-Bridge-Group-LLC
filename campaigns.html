@@ -5681,11 +5681,8 @@
                 }
 
                 if (campaignReplyNoRepliesCopyTemplateButton) {
-                    const primaryNoReplyConversation = campaignReplyFilterMode === 'no-replies'
-                        ? getPrimaryNoRepliesConversation()
-                        : null;
                     campaignReplyNoRepliesCopyTemplateButton.hidden = campaignReplyFilterMode !== 'no-replies';
-                    campaignReplyNoRepliesCopyTemplateButton.disabled = !primaryNoReplyConversation;
+                    campaignReplyNoRepliesCopyTemplateButton.disabled = false;
                 }
             }
 
@@ -7014,8 +7011,10 @@
             }
 
             if (campaignReplyNoRepliesCopyTemplateButton) {
-                campaignReplyNoRepliesCopyTemplateButton.addEventListener('click', () => {
-                    copyNoRepliesFollowUpTemplate();
+                campaignReplyNoRepliesCopyTemplateButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openCampaignNoRepliesTemplateModal();
                 });
             }
 
