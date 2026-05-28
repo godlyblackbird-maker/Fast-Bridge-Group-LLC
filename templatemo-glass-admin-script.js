@@ -22482,6 +22482,7 @@ function initNavbarDateTime() {
         let importSource = 'redfin';
         let hydratedImportedItems = [];
         let hasHydratedImportedItems = false;
+        const DEALS_IMPORT_PREFILL_STORAGE_KEY = 'fastDealsImportPrefillPayload';
 
         if (!list || !count || !listPagination || !importedList || !importedCount || !importedPagination || !assignedList || !assignedCount || !assignedPagination) {
             return;
@@ -23162,6 +23163,101 @@ function initNavbarDateTime() {
 
         bindDealsImportDigitGrouping(importForm);
         setDealsImportSource(importSource);
+
+        function normalizeDealsImportPrefillValue(value, maxLength = 320) {
+            return String(value || '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+        }
+
+        function readDealsImportPrefillFromStorage() {
+            try {
+                const raw = localStorage.getItem(DEALS_IMPORT_PREFILL_STORAGE_KEY);
+                if (!raw) {
+                    return null;
+                }
+                localStorage.removeItem(DEALS_IMPORT_PREFILL_STORAGE_KEY);
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        function readDealsImportPrefillFromQuery() {
+            let params;
+            try {
+                params = new URLSearchParams(window.location.search || '');
+            } catch (_error) {
+                return null;
+            }
+
+            if (!params.has('openImport')) {
+                return null;
+            }
+
+            const shouldOpenImport = /^(1|true|yes)$/i.test(String(params.get('openImport') || '').trim());
+            if (!shouldOpenImport) {
+                return null;
+            }
+
+            const payload = {
+                address: normalizeDealsImportPrefillValue(params.get('address') || '', 320),
+                agentName: normalizeDealsImportPrefillValue(params.get('agentName') || '', 160),
+                agentPhone: normalizeDealsImportPrefillValue(params.get('agentPhone') || '', 40),
+                agentEmail: normalizeDealsImportPrefillValue(params.get('agentEmail') || '', 320)
+            };
+
+            const nextUrl = `${window.location.pathname}${window.location.hash || ''}`;
+            if (window.history && typeof window.history.replaceState === 'function') {
+                window.history.replaceState({}, document.title, nextUrl);
+            }
+
+            if (!payload.address && !payload.agentName && !payload.agentPhone && !payload.agentEmail) {
+                return null;
+            }
+
+            return payload;
+        }
+
+        function applyDealsImportPrefillPayload(payload) {
+            const source = payload && typeof payload === 'object' ? payload : null;
+            if (!source) {
+                return false;
+            }
+
+            const nextAddress = normalizeDealsImportPrefillValue(source.address, 320);
+            const nextAgentName = normalizeDealsImportPrefillValue(source.agentName, 160);
+            const nextAgentPhone = normalizeDealsImportPrefillValue(source.agentPhone, 40);
+            const nextAgentEmail = normalizeDealsImportPrefillValue(source.agentEmail, 320);
+
+            if (!nextAddress && !nextAgentName && !nextAgentPhone && !nextAgentEmail) {
+                return false;
+            }
+
+            openImportWidget();
+
+            const setFieldIfPresent = (fieldId, fieldValue) => {
+                const field = document.getElementById(fieldId);
+                if (!(field instanceof HTMLInputElement) || !fieldValue) {
+                    return;
+                }
+                field.value = fieldValue;
+                if (field.dataset.dealsAutoCommas === 'true') {
+                    applyDealsImportDigitGrouping(field);
+                }
+            };
+
+            setFieldIfPresent('deals-import-address', nextAddress);
+            setFieldIfPresent('deals-import-agent-name', nextAgentName);
+            setFieldIfPresent('deals-import-agent-phone', nextAgentPhone);
+            setFieldIfPresent('deals-import-agent-email', nextAgentEmail);
+
+            return true;
+        }
+
+        const dealsImportPrefillPayload = readDealsImportPrefillFromStorage() || readDealsImportPrefillFromQuery();
+        if (applyDealsImportPrefillPayload(dealsImportPrefillPayload)) {
+            showDashboardToast('success', 'Import Prefilled', 'Import Property opened with Twilio conversation details.');
+        }
 
         function normalizeStatus(value) {
             return ['active', 'pending', 'on-hold', 'closed'].includes(value) ? value : 'active';
