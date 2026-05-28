@@ -22687,6 +22687,12 @@ function initNavbarDateTime() {
             }
         }
 
+        function setDealsImportSourceUrl(value) {
+            if (importSourceUrlInput) {
+                importSourceUrlInput.value = String(value || '').trim();
+            }
+        }
+
         function inferDealsImportSourceFromUrl(value) {
             const raw = String(value || '').trim().toLowerCase();
             if (raw.includes('zillow.com')) {
@@ -22903,9 +22909,7 @@ function initNavbarDateTime() {
             const defaultFailureMessage = String(settings.failureMessage || 'FAST could not pull the listing details from that link.').trim() || 'FAST could not pull the listing details from that link.';
 
             setDealsImportSource(inferredSource);
-            if (importSourceUrlInput) {
-                importSourceUrlInput.value = normalizedUrl;
-            }
+            setDealsImportSourceUrl(normalizedUrl);
 
             if (shouldManageBusyState) {
                 setDealsImportLookupBusy(true, 'fetch');
@@ -22989,6 +22993,9 @@ function initNavbarDateTime() {
                 ).trim();
 
                 if (redfinUrl) {
+                    setDealsImportSource('redfin');
+                    setDealsImportSourceUrl(redfinUrl);
+                    await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
                     await fetchListingPreviewFromProvidedUrl(redfinUrl, {
                         manageBusyState: false,
                         successTitle: 'Auto Collected',
@@ -23006,9 +23013,7 @@ function initNavbarDateTime() {
                     : {};
 
                 if (primaryUrl) {
-                    if (importSourceUrlInput) {
-                        importSourceUrlInput.value = primaryUrl;
-                    }
+                    setDealsImportSourceUrl(primaryUrl);
                     if (primarySource) {
                         setDealsImportSource(primarySource);
                     }
