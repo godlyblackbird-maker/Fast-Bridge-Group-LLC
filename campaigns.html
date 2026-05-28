@@ -705,6 +705,27 @@
             min-height: 220px;
         }
 
+        .campaign-char-count {
+            margin-top: 4px;
+            font-size: 10px;
+            line-height: 1.2;
+            text-align: right;
+            letter-spacing: 0.01em;
+            color: #64748b;
+        }
+
+        .campaign-char-count.is-warning {
+            color: #ca8a04;
+        }
+
+        .campaign-char-count.is-limit {
+            color: #dc2626;
+        }
+
+        .campaign-char-count.is-disabled {
+            opacity: 0.58;
+        }
+
         .twilio-quick-send-card .campaign-media-toolbar {
             padding: 14px;
             border-radius: 18px;
@@ -1518,55 +1539,50 @@
             align-items: center;
             justify-content: center;
             border-radius: 999px;
-            border: 1px solid rgba(59, 130, 246, 0.24);
-            background: rgba(255, 255, 255, 0.96);
-            color: #2563eb;
-            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+                justify-self: start;
+            min-width: 34px;
         }
 
-        .campaign-reply-conversation-follow-up {
-            min-width: 34px;
-            height: 34px;
+        @media (max-width: 780px) {
             padding: 0 10px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 999px;
+            .twilio-quick-send-hero,
+            .twilio-quick-send-main,
             border: 1px solid rgba(245, 158, 11, 0.28);
             background: rgba(255, 255, 255, 0.96);
             color: #b45309;
             box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.06em;
+            .twilio-quick-send-template-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .twilio-quick-send-bottom-actions {
             text-transform: uppercase;
             transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, color 0.18s ease;
         }
-
         .campaign-reply-conversation-follow-up:hover,
         .campaign-reply-conversation-follow-up:focus-visible {
             transform: translateY(-1px);
-            border-color: rgba(217, 119, 6, 0.36);
+        }
             color: #92400e;
             box-shadow: 0 14px 24px rgba(120, 53, 15, 0.14);
-        }
 
         .campaign-reply-conversation-dismiss:hover,
         .campaign-reply-conversation-dismiss:focus-visible {
+            gap: 16px;
+            margin-bottom: 4px;
             transform: translateY(-1px);
-            border-color: rgba(37, 99, 235, 0.34);
-            color: #1d4ed8;
-            box-shadow: 0 14px 24px rgba(30, 64, 175, 0.14);
-        }
 
-        .campaign-reply-conversation-delete {
-            width: 34px;
+        .campaign-provider-inline-copy {
+            display: grid;
+            gap: 4px;
+        }
             height: 34px;
             min-width: 34px;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
             border-radius: 999px;
             border: 1px solid rgba(248, 113, 113, 0.24);
             background: rgba(255, 255, 255, 0.96);
@@ -1575,12 +1591,6 @@
             transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
         }
 
-        .campaign-reply-conversation-delete:hover,
-        .campaign-reply-conversation-delete:focus-visible {
-            transform: translateY(-1px);
-            border-color: rgba(239, 68, 68, 0.36);
-            color: #991b1b;
-            box-shadow: 0 14px 24px rgba(127, 29, 29, 0.14);
         }
 
         .campaign-reply-conversation-dismiss svg,
@@ -2027,6 +2037,11 @@
             display: flex;
             gap: 12px;
             align-items: flex-end;
+        }
+
+        .campaign-reply-input-shell {
+            flex: 1 1 auto;
+            min-width: 0;
         }
 
         .campaign-reply-action-group {
@@ -3394,7 +3409,10 @@
                                         <input id="campaign-reply-media-input" class="campaign-media-input" type="file" accept="image/*,video/*,audio/*,.pdf,.txt,.csv,.rtf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.xml,.json" multiple>
                                         <div id="campaign-reply-media-pending" class="campaign-media-pending" hidden></div>
                                         <div class="campaign-reply-form-row">
-                                            <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
+                                            <div class="campaign-reply-input-shell">
+                                                <textarea id="campaign-reply-input" class="form-input outreach-textarea" placeholder="Type a direct Twilio response..." disabled></textarea>
+                                                <div id="campaign-reply-char-count" class="campaign-char-count is-disabled" aria-live="polite">0 characters</div>
+                                            </div>
                                             <div class="campaign-reply-action-group">
                                                 <button id="campaign-reply-attach" type="button" class="card-btn" aria-label="Attach file" title="Attach file" disabled>
                                                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -3466,6 +3484,7 @@
                                                 <div class="form-group outreach-full-width">
                                                     <label for="campaign-sms-body">Message</label>
                                                     <textarea id="campaign-sms-body" class="form-input outreach-textarea" placeholder="Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out."></textarea>
+                                                    <div id="campaign-sms-body-char-count" class="campaign-char-count" aria-live="polite">0 characters</div>
                                                 </div>
                                                 <div class="form-group outreach-full-width">
                                                     <div class="campaign-media-toolbar">
@@ -3715,6 +3734,7 @@
             const campaignNameInput = document.getElementById('campaign-sms-name');
             const campaignRecipientsInput = document.getElementById('campaign-sms-recipients');
             const campaignBodyInput = document.getElementById('campaign-sms-body');
+            const campaignBodyCharacterCount = document.getElementById('campaign-sms-body-char-count');
             const campaignMediaInput = document.getElementById('campaign-media-input');
             const campaignMediaAttachButton = document.getElementById('campaign-media-attach');
             const campaignMediaPending = document.getElementById('campaign-media-pending');
@@ -3762,6 +3782,7 @@
             const campaignReplyThread = document.getElementById('campaign-reply-thread');
             const campaignReplyForm = document.getElementById('campaign-reply-form');
             const campaignReplyInput = document.getElementById('campaign-reply-input');
+            const campaignReplyCharacterCount = document.getElementById('campaign-reply-char-count');
             const campaignReplyMediaInput = document.getElementById('campaign-reply-media-input');
             const campaignReplyMediaPending = document.getElementById('campaign-reply-media-pending');
             const campaignReplyAttachButton = document.getElementById('campaign-reply-attach');
@@ -3945,6 +3966,7 @@
                     campaignBodyInput.placeholder = enabled
                         ? 'Hi [First Name], this is [Your Name] with FAST BRIDGE GROUP. We are buying in [Area]... Reply STOP to opt out.'
                         : blockedMessage;
+                    syncCampaignBodyCharacterCount();
                 }
 
                 if (campaignSendStatus && !enabled) {
@@ -4249,6 +4271,8 @@
             const CAMPAIGN_REPLY_DISMISSED_UNREAD_KEY = 'campaignReplyDismissedUnreadByConversation';
             const CAMPAIGN_REPLY_DISMISSED_NO_REPLIES_KEY = 'campaignReplyDismissedNoRepliesByConversation';
             const campaignReplyDefaultPlaceholder = campaignReplyInput ? String(campaignReplyInput.getAttribute('placeholder') || '').trim() : 'Type a direct Twilio response...';
+            const CAMPAIGN_SMS_WARNING_THRESHOLD = 90;
+            const CAMPAIGN_SMS_LIMIT_THRESHOLD = 160;
             let dismissedUnreadConversationMap = (() => {
                 try {
                     const parsed = JSON.parse(localStorage.getItem(CAMPAIGN_REPLY_DISMISSED_UNREAD_KEY) || '{}');
@@ -4873,6 +4897,26 @@
                 if (campaignReplySendButton) {
                     campaignReplySendButton.disabled = blocked || !hasReplyTarget;
                 }
+            }
+
+            function syncCampaignSmsCharacterCount(counterElement, inputElement) {
+                if (!counterElement || !inputElement) {
+                    return;
+                }
+
+                const characterCount = String(inputElement.value || '').length;
+                counterElement.textContent = `${characterCount} characters`;
+                counterElement.classList.toggle('is-warning', characterCount >= CAMPAIGN_SMS_WARNING_THRESHOLD && characterCount < CAMPAIGN_SMS_LIMIT_THRESHOLD);
+                counterElement.classList.toggle('is-limit', characterCount >= CAMPAIGN_SMS_LIMIT_THRESHOLD);
+                counterElement.classList.toggle('is-disabled', Boolean(inputElement.disabled));
+            }
+
+            function syncCampaignBodyCharacterCount() {
+                syncCampaignSmsCharacterCount(campaignBodyCharacterCount, campaignBodyInput);
+            }
+
+            function syncCampaignReplyCharacterCount() {
+                syncCampaignSmsCharacterCount(campaignReplyCharacterCount, campaignReplyInput);
             }
 
             async function promptTwilioContactNameEdit() {
@@ -5575,6 +5619,7 @@
                 const nextHeight = Math.min(Math.max(campaignReplyInput.scrollHeight, 48), 220);
                 campaignReplyInput.style.height = `${nextHeight}px`;
                 campaignReplyInput.style.overflowY = campaignReplyInput.scrollHeight > 220 ? 'auto' : 'hidden';
+                syncCampaignReplyCharacterCount();
             }
 
             function setCampaignRepliesStatus(message, mode) {
@@ -7209,6 +7254,12 @@
                 });
             }
 
+            if (campaignBodyInput) {
+                campaignBodyInput.addEventListener('input', () => {
+                    syncCampaignBodyCharacterCount();
+                });
+            }
+
 
             campaignNoRepliesTemplateCloseButtons.forEach((button) => {
                 button.addEventListener('click', closeCampaignNoRepliesTemplateModal);
@@ -7283,6 +7334,7 @@
 
                 button.addEventListener('click', () => {
                     campaignBodyInput.value = campaignTemplateSettings.templates[templateKey] || CAMPAIGN_TEMPLATE_DEFAULTS[templateKey];
+                    syncCampaignBodyCharacterCount();
                 });
             });
 
@@ -7386,6 +7438,7 @@
 
                     if (campaignBodyInput && nextStep.templateKey && campaignTemplateSettings.templates[nextStep.templateKey]) {
                         campaignBodyInput.value = campaignTemplateSettings.templates[nextStep.templateKey];
+                        syncCampaignBodyCharacterCount();
                     }
                 });
             }
@@ -7755,6 +7808,7 @@
             }
 
             syncCampaignReplyInputHeight();
+            syncCampaignBodyCharacterCount();
 
             (async () => {
                 await loadTwilioStatus();
