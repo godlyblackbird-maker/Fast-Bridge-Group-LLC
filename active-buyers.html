@@ -223,12 +223,27 @@
         }
 
         @media (max-width: 900px) {
+            .buyers-sheet-scroll-rail {
+                padding: 10px 12px;
+            }
+
             .buyers-sheet-table {
                 min-width: 1220px;
             }
         }
 
         @media (max-width: 700px) {
+            .buyers-sheet-scroll-rail {
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .buyers-sheet-scroll-rail-label {
+                padding: 7px 10px;
+                font-size: 10px;
+                letter-spacing: 0.1em;
+            }
+
             .buyers-sheet-table {
                 min-width: 1220px;
                 font-size: 13px;
@@ -261,6 +276,90 @@
             gap: 8px;
         }
 
+        .buyers-sheet-scroll-rail {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 10px 14px;
+            margin: 0 0 12px;
+            border: 1px solid color-mix(in srgb, var(--buyers-border) 72%, rgb(var(--accent-light-rgb) / 0.18) 28%);
+            border-radius: 999px;
+            background:
+                radial-gradient(circle at left center, rgb(var(--accent-light-rgb) / 0.16), transparent 34%),
+                linear-gradient(135deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03));
+            box-shadow:
+                inset 0 1px 0 rgb(255 255 255 / 0.08),
+                0 18px 32px -26px rgb(0 0 0 / 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .buyers-sheet-scroll-rail.is-bottom {
+            margin: 12px 0 0;
+        }
+
+        .buyers-sheet-scroll-rail-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgb(255 255 255 / 0.07);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .buyers-sheet-scroll-rail-label svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.88;
+        }
+
+        .buyers-sheet-scroll-rail-track {
+            position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: auto;
+            scrollbar-color: var(--buyers-scroll-thumb) transparent;
+            cursor: ew-resize;
+        }
+
+        .buyers-sheet-scroll-rail-track::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .buyers-sheet-scroll-rail-track::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.72), rgb(var(--accent-light-rgb) / 0.88));
+            border-radius: 999px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .buyers-sheet-scroll-rail-track::-webkit-scrollbar-track {
+            background: linear-gradient(90deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
+            border-radius: 999px;
+        }
+
+        .buyers-sheet-scroll-rail-track::before {
+            content: '';
+            position: absolute;
+            inset: 50% 0 auto;
+            height: 1px;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, transparent, rgb(var(--accent-light-rgb) / 0.34), transparent);
+            pointer-events: none;
+        }
+
+        .buyers-sheet-scroll-rail-spacer {
+            height: 1px;
+        }
+
         .buyers-sheet-table td.buyers-portal-cell {
             min-width: 172px;
             white-space: normal;
@@ -289,10 +388,15 @@
             width: 100%;
             max-width: 100%;
             overflow-x: auto;
+            scrollbar-width: none;
             border: 1px solid var(--buyers-border);
             border-radius: 16px;
             background: var(--buyers-wrap-bg);
             backdrop-filter: blur(8px);
+        }
+
+        .buyers-sheet-table-wrap::-webkit-scrollbar {
+            height: 0;
         }
 
         .buyers-sheet-table {
@@ -350,8 +454,8 @@
             background: var(--buyers-focus-bg);
         }
 
-        .buyers-sheet-table thead th:nth-child(9),
-        .buyers-sheet-table tbody td:nth-child(9) {
+        .buyers-sheet-table thead th:nth-child(8),
+        .buyers-sheet-table tbody td:nth-child(8) {
             width: 320px;
             min-width: 320px;
             max-width: 320px;
@@ -603,6 +707,10 @@
             margin-top: 0.45rem;
             font-size: 12px;
             color: var(--buyers-note);
+        }
+
+        .buyers-session-account {
+            font-weight: 600;
         }
 
         .buyers-sync-status.is-error {
@@ -876,6 +984,7 @@
                             <div class="buyers-sheet-meta">
                                 <span id="buyers-last-edited">Last update: Loading...</span>
                                 <span id="buyers-sync-status" class="buyers-sync-status">Syncing shared admin sheet...</span>
+                                <span id="buyers-session-account" class="buyers-session-account">Signed in as: Checking session...</span>
                             </div>
                         </div>
                         <div class="buyers-sheet-actions">
@@ -973,7 +1082,16 @@
                         </div>
                     </div>
 
-                    <div class="buyers-sheet-table-wrap">
+                    <div class="buyers-sheet-scroll-rail is-top" aria-label="Top horizontal scroll for Active Buyers">
+                        <span class="buyers-sheet-scroll-rail-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"></path><path d="M9 7l-5 5 5 5"></path><path d="M15 7l5 5-5 5"></path></svg>
+                            Slide Columns
+                        </span>
+                        <div id="buyers-top-scroll-track" class="buyers-sheet-scroll-rail-track" role="scrollbar" aria-controls="buyers-sheet-table" aria-label="Top horizontal Active Buyers scroll">
+                            <div id="buyers-top-scroll-spacer" class="buyers-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                        </div>
+                    </div>
+                    <div id="buyers-sheet-table-wrap" class="buyers-sheet-table-wrap">
                         <table class="buyers-sheet-table" id="buyers-sheet-table">
                             <thead>
                                 <tr>
@@ -982,7 +1100,6 @@
                                     <th>Email Categories</th>
                                     <th>Cell Phone</th>
                                     <th>Company Name</th>
-                                    <th>Contact</th>
                                     <th>Comments</th>
                                     <th>NOTES</th>
                                     <th>Buy Box ZIPs</th>
@@ -997,6 +1114,15 @@
                             <tbody id="buyers-sheet-body">
                             </tbody>
                         </table>
+                    </div>
+                    <div class="buyers-sheet-scroll-rail is-bottom" aria-label="Bottom horizontal scroll for Active Buyers">
+                        <span class="buyers-sheet-scroll-rail-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"></path><path d="M9 7l-5 5 5 5"></path><path d="M15 7l5 5-5 5"></path></svg>
+                            Scroll Rail
+                        </span>
+                        <div id="buyers-bottom-scroll-track" class="buyers-sheet-scroll-rail-track" role="scrollbar" aria-controls="buyers-sheet-table" aria-label="Bottom horizontal Active Buyers scroll">
+                            <div id="buyers-bottom-scroll-spacer" class="buyers-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                        </div>
                     </div>
                     <p class="buyers-sheet-note">Tip: Only admins can use this list. Changes save to one shared admin sheet and refresh across admin sessions automatically. In Buy Box ZIPs, you can enter California city names like Los Angeles or county names like Orange County and FAST will expand them into ZIP codes when you save.</p>
                 </div>
@@ -1390,10 +1516,17 @@
             ];
             const SEEDED_ROWS = DEFAULT_ROWS.concat(LA_ROWS);
             const body = document.getElementById('buyers-sheet-body');
+            const tableWrap = document.getElementById('buyers-sheet-table-wrap');
+            const tableElement = document.getElementById('buyers-sheet-table');
+            const topScrollTrack = document.getElementById('buyers-top-scroll-track');
+            const topScrollSpacer = document.getElementById('buyers-top-scroll-spacer');
+            const bottomScrollTrack = document.getElementById('buyers-bottom-scroll-track');
+            const bottomScrollSpacer = document.getElementById('buyers-bottom-scroll-spacer');
             const addRowBtn = document.getElementById('buyers-add-row');
             const saveCsvBtn = document.getElementById('buyers-save-csv');
             const syncStatus = document.getElementById('buyers-sync-status');
             const lastEdited = document.getElementById('buyers-last-edited');
+            const sessionAccount = document.getElementById('buyers-session-account');
             const buyersCoverageMapCanvas = document.getElementById('buyers-coverage-map-canvas');
             const buyersCoverageMapEmpty = document.getElementById('buyers-coverage-map-empty');
             const buyersMapStatus = document.getElementById('buyers-map-status');
@@ -1402,7 +1535,7 @@
             const buyersMapZipChips = document.getElementById('buyers-map-zip-chips');
             const buyersMapEmptyCopy = document.getElementById('buyers-map-empty-copy');
 
-            if (!body || !addRowBtn || !saveCsvBtn || !syncStatus || !lastEdited || !buyersCoverageMapCanvas || !buyersCoverageMapEmpty || !buyersMapStatus || !buyersMapZipCount || !buyersMapBuyerCount || !buyersMapZipChips || !buyersMapEmptyCopy) {
+            if (!body || !tableWrap || !tableElement || !topScrollTrack || !topScrollSpacer || !bottomScrollTrack || !bottomScrollSpacer || !addRowBtn || !saveCsvBtn || !syncStatus || !lastEdited || !sessionAccount || !buyersCoverageMapCanvas || !buyersCoverageMapEmpty || !buyersMapStatus || !buyersMapZipCount || !buyersMapBuyerCount || !buyersMapZipChips || !buyersMapEmptyCopy) {
                 return;
             }
 
@@ -1429,13 +1562,82 @@
             const BUYER_CA_CITY_ZIP_LOOKUP_PATH = '/california-city-zips.json';
             const BUYER_CA_COUNTY_ZIP_LOOKUP_PATH = '/california-county-zips.json';
 
+            function initBuyersScrollRails() {
+                let syncingSource = '';
+
+                const syncRailMetrics = () => {
+                    const scrollWidth = Math.max(tableElement.scrollWidth, tableWrap.scrollWidth, tableWrap.clientWidth);
+                    const spacerWidth = `${scrollWidth}px`;
+                    topScrollSpacer.style.width = spacerWidth;
+                    bottomScrollSpacer.style.width = spacerWidth;
+
+                    const maxScrollLeft = Math.max(tableWrap.scrollWidth - tableWrap.clientWidth, 0);
+                    const currentScrollLeft = Math.min(tableWrap.scrollLeft, maxScrollLeft);
+                    topScrollTrack.scrollLeft = currentScrollLeft;
+                    bottomScrollTrack.scrollLeft = currentScrollLeft;
+
+                    const hasOverflow = maxScrollLeft > 0;
+                    if (topScrollTrack.parentElement) {
+                        topScrollTrack.parentElement.hidden = !hasOverflow;
+                    }
+                    if (bottomScrollTrack.parentElement) {
+                        bottomScrollTrack.parentElement.hidden = !hasOverflow;
+                    }
+                };
+
+                const syncFrom = (source) => {
+                    if (syncingSource === source) {
+                        return;
+                    }
+
+                    syncingSource = source;
+
+                    if (source === 'table') {
+                        topScrollTrack.scrollLeft = tableWrap.scrollLeft;
+                        bottomScrollTrack.scrollLeft = tableWrap.scrollLeft;
+                    } else if (source === 'top') {
+                        tableWrap.scrollLeft = topScrollTrack.scrollLeft;
+                        bottomScrollTrack.scrollLeft = topScrollTrack.scrollLeft;
+                    } else if (source === 'bottom') {
+                        tableWrap.scrollLeft = bottomScrollTrack.scrollLeft;
+                        topScrollTrack.scrollLeft = bottomScrollTrack.scrollLeft;
+                    }
+
+                    if (typeof window.requestAnimationFrame === 'function') {
+                        window.requestAnimationFrame(() => {
+                            syncingSource = '';
+                        });
+                    } else {
+                        syncingSource = '';
+                    }
+                };
+
+                tableWrap.addEventListener('scroll', () => syncFrom('table'), { passive: true });
+                topScrollTrack.addEventListener('scroll', () => syncFrom('top'), { passive: true });
+                bottomScrollTrack.addEventListener('scroll', () => syncFrom('bottom'), { passive: true });
+                window.addEventListener('resize', syncRailMetrics);
+
+                if (typeof ResizeObserver === 'function') {
+                    const railObserver = new ResizeObserver(() => syncRailMetrics());
+                    railObserver.observe(tableWrap);
+                    railObserver.observe(tableElement);
+                }
+
+                if (typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(syncRailMetrics);
+                } else {
+                    syncRailMetrics();
+                }
+            }
+
+            initBuyersScrollRails();
+
             const CSV_HEADERS = [
                 'Active Buyer?',
                 'First Last Name',
                 'Email Categories',
                 'Cell Phone',
                 'Company Name',
-                'Contact',
                 'Comments',
                 'NOTES',
                 'Buy Box ZIPs',
@@ -1477,6 +1679,21 @@
                     email: String(verifiedAdminUser.email || '').trim().toLowerCase(),
                     role: 'admin'
                 };
+            }
+
+            function formatSessionIdentity(userLike) {
+                if (!userLike || typeof userLike !== 'object') {
+                    return 'Unknown account';
+                }
+
+                const name = String(userLike.name || 'Unknown user').trim();
+                const email = String(userLike.email || '').trim().toLowerCase();
+                const role = String(userLike.role || 'unknown').trim().toLowerCase() || 'unknown';
+                return email ? `${name} (${email}, ${role})` : `${name} (${role})`;
+            }
+
+            function updateSessionAccountMeta(userLike) {
+                sessionAccount.textContent = `Signed in as: ${formatSessionIdentity(userLike)}`;
             }
 
             function redirectUnauthorized() {
@@ -1556,12 +1773,16 @@
                     headers: getAuthorizedHeaders(options && options.headers)
                 });
 
+                const payload = await response.json().catch(() => ({}));
+
                 if (response.status === 401 || response.status === 403) {
-                    redirectUnauthorized();
-                    throw new Error('Admin access required');
+                    if (!(options && options.suppressUnauthorizedRedirect)) {
+                        redirectUnauthorized();
+                    }
+
+                    throw new Error(payload && payload.error ? payload.error : 'Admin access required');
                 }
 
-                const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(payload && payload.error ? payload.error : 'Request failed.');
                 }
@@ -1815,7 +2036,7 @@
                 });
                 tr.appendChild(activeCell);
 
-                ['name', 'emailCategories', 'cellPhone', 'companyName', 'contact', 'comments', 'notes', 'buyBoxZips', 'minPrice', 'maxPrice', 'assetClasses', 'financingTypes', 'targetSpreadPercent'].forEach(key => {
+                ['name', 'emailCategories', 'cellPhone', 'companyName', 'comments', 'notes', 'buyBoxZips', 'minPrice', 'maxPrice', 'assetClasses', 'financingTypes', 'targetSpreadPercent'].forEach(key => {
                     const td = document.createElement('td');
                     if (key === 'buyBoxZips') {
                         td.className = 'buyers-buy-box-cell';
@@ -1863,22 +2084,21 @@
 
             function readBuyerRow(tr) {
                 const cells = tr.querySelectorAll('td');
-                const buyBoxEditor = cells[8] ? cells[8].querySelector('.buyers-buy-box-editor') : null;
+                const buyBoxEditor = cells[7] ? cells[7].querySelector('.buyers-buy-box-editor') : null;
                 return {
                     activeBuyer: cells[0] ? cells[0].textContent.trim() : 'BUYER',
                     name: cells[1] ? cells[1].textContent.trim() : '',
                     emailCategories: cells[2] ? cells[2].textContent.trim() : '',
                     cellPhone: cells[3] ? cells[3].textContent.trim() : '',
                     companyName: cells[4] ? cells[4].textContent.trim() : '',
-                    contact: cells[5] ? cells[5].textContent.trim() : '',
-                    comments: cells[6] ? cells[6].textContent.trim() : '',
-                    notes: cells[7] ? cells[7].textContent.trim() : '',
+                    comments: cells[5] ? cells[5].textContent.trim() : '',
+                    notes: cells[6] ? cells[6].textContent.trim() : '',
                     buyBoxZips: expandBuyerBuyBoxValue(buyBoxEditor ? buyBoxEditor.textContent.trim() : '').value,
-                    minPrice: cells[9] ? cells[9].textContent.trim() : '',
-                    maxPrice: cells[10] ? cells[10].textContent.trim() : '',
-                    assetClasses: cells[11] ? cells[11].textContent.trim() : '',
-                    financingTypes: cells[12] ? cells[12].textContent.trim() : '',
-                    targetSpreadPercent: cells[13] ? cells[13].textContent.trim() : ''
+                    minPrice: cells[8] ? cells[8].textContent.trim() : '',
+                    maxPrice: cells[9] ? cells[9].textContent.trim() : '',
+                    assetClasses: cells[10] ? cells[10].textContent.trim() : '',
+                    financingTypes: cells[11] ? cells[11].textContent.trim() : '',
+                    targetSpreadPercent: cells[12] ? cells[12].textContent.trim() : ''
                 };
             }
 
@@ -1902,6 +2122,7 @@
                 const primaryEmail = String((rowData && rowData.emailCategories) || '').split('|')[0].trim();
                 const contactName = String((rowData && rowData.name) || '').trim();
                 const propertyFocus = [rowData.assetClasses, rowData.buyBoxZips].filter(Boolean).join(' | ');
+                let activeSessionUser = null;
 
                 if (!contactName && !primaryEmail) {
                     statusNode.textContent = 'Add at least a buyer name or email first.';
@@ -1910,12 +2131,21 @@
                 }
 
                 triggerButton.disabled = true;
-                statusNode.textContent = 'Opening investor portal...';
                 statusNode.classList.remove('is-error');
 
                 try {
+                    activeSessionUser = await ensureCurrentAdminSession();
+                    if (!activeSessionUser || String(activeSessionUser.role || '').trim().toLowerCase() !== 'admin') {
+                        const sessionLabel = formatSessionIdentity(activeSessionUser || getStoredUser());
+                        throw new Error(`Portal access requires an admin session. Current session: ${sessionLabel}.`);
+                    }
+
+                    updateSessionAccountMeta(activeSessionUser);
+                    statusNode.textContent = `Opening investor portal as ${formatSessionIdentity(activeSessionUser)}...`;
+
                     const payload = await fetchJson('/api/client-portals', {
                         method: 'POST',
+                        suppressUnauthorizedRedirect: true,
                         headers: {
                             'Content-Type': 'application/json'
                         },
@@ -1944,7 +2174,13 @@
                     statusNode.textContent = portal.publicUrl ? 'Portal ready. Share link is inside the portal.' : 'Portal ready.';
                     window.open(portal.adminUrl || `/portal.html?portal=${encodeURIComponent(portal.id)}`, '_blank', 'noopener');
                 } catch (error) {
-                    statusNode.textContent = error && error.message ? error.message : 'Unable to open the investor portal.';
+                    const rawMessage = error && error.message ? error.message : 'Unable to open the investor portal.';
+                    if (/admin access required/i.test(rawMessage) || /portal access requires an admin session/i.test(rawMessage)) {
+                        const sessionLabel = formatSessionIdentity(activeSessionUser || getCurrentAdmin() || getStoredUser());
+                        statusNode.textContent = `Portal access failed for ${sessionLabel}. ${rawMessage}`;
+                    } else {
+                        statusNode.textContent = rawMessage;
+                    }
                     statusNode.classList.add('is-error');
                 } finally {
                     triggerButton.disabled = false;
@@ -2701,6 +2937,7 @@
                     : null;
 
                 const activeUser = sessionUser || null;
+                updateSessionAccountMeta(activeUser);
                 if (!activeUser || String(activeUser.role || '').trim().toLowerCase() !== 'admin') {
                     verifiedAdminUser = null;
                     redirectUnauthorized();

@@ -5,19 +5,305 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deal Portal | FAST BRIDGE GROUP LLC</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20260327g">
+    <link rel="shortcut icon" href="/favicon.ico?v=20260327g">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260327g">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260327g">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=20260327g">
+    <link rel="manifest" href="/site.webmanifest?v=20260327g">
     <link rel="stylesheet" href="templatemo-glass-admin-style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="theme-preload-script">
+        (function () {
+            try {
+                const root = document.documentElement;
+
+                const readJson = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || '{}');
+                    } catch (_error) {
+                        return {};
+                    }
+                };
+
+                const profile = readJson('userProfile');
+                const user = readJson('user');
+                const authToken = String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
+                const userEmail = String(user.email || '').trim().toLowerCase();
+                const profileEmail = String(profile.email || '').trim().toLowerCase();
+                const canUseProfileIdentity = !authToken || !userEmail || !profileEmail || profileEmail === userEmail;
+                const email = userEmail || (canUseProfileIdentity ? profileEmail : '');
+                const name = String(user.name || (canUseProfileIdentity ? profile.name : '') || 'User').trim();
+                const userKey = email || name.toLowerCase().replace(/\s+/g, '-') || 'default-user';
+                const sidebarStateStore = readJson('dashboardSidebarStateByUser');
+                const sidebarState = sidebarStateStore[userKey];
+                const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
+
+                root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
+
+                const themeStore = readJson('dashboardThemeByUser');
+                const normalizedNameKey = name.toLowerCase().replace(/\s+/g, '-');
+                const candidateThemeKeys = Array.from(new Set([userKey, email, normalizedNameKey, 'default-user'].filter(Boolean)));
+                let theme = String(candidateThemeKeys
+                    .map((key) => {
+                        const entry = themeStore[key];
+                        return entry && typeof entry === 'object' ? entry.value : entry;
+                    })
+                    .find((value) => typeof value === 'string' && value.trim()) || '').trim().toLowerCase() || 'beach';
+
+                if (theme === 'system') {
+                    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (theme === 'blacklight') {
+                    theme = 'dark';
+                }
+                if (!/^(dark|light|beach|cloud|swamp|sunset|space|cyberpunk|japan|holloween|christmas)$/.test(String(theme))) {
+                    theme = 'beach';
+                }
+                root.setAttribute('data-theme', theme);
+
+                const defaultThemeLogoPath = 'png photos/FAST LOGO 777.png';
+                const themeLogoPaths = {
+                    christmas: 'png photos/Christmas Theme Logo.png',
+                    swamp: 'png photos/Swamp Theme Logo.png',
+                    cyberpunk: 'png photos/CYBERPUNK LOGO.png',
+                    space: 'png photos/Night theme logo.png',
+                    blacklight: 'png photos/FAST LOGO 777.png',
+                    japan: 'png photos/Japan Theme Mode Logo.png'
+                };
+                const themeLogoPath = themeLogoPaths[theme] || defaultThemeLogoPath;
+                root.setAttribute('data-theme-logo-path', themeLogoPath);
+
+                const preloadThemeLogo = new Image();
+                preloadThemeLogo.src = themeLogoPath;
+
+                const applyThemeLogos = (scope) => {
+                    if (!scope || typeof scope.querySelectorAll !== 'function') {
+                        return;
+                    }
+
+                    if (scope.matches && scope.matches('img.logo-img, img.portal-brand-logo') && scope.getAttribute('src') !== themeLogoPath) {
+                        scope.setAttribute('src', themeLogoPath);
+                    }
+
+                    scope.querySelectorAll('img.logo-img, img.portal-brand-logo').forEach((image) => {
+                        if (image.getAttribute('src') !== themeLogoPath) {
+                            image.setAttribute('src', themeLogoPath);
+                        }
+                    });
+                };
+
+                const themeLogoObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node && node.nodeType === 1) {
+                                applyThemeLogos(node);
+                            }
+                        });
+                    });
+                });
+
+                themeLogoObserver.observe(document.documentElement, { childList: true, subtree: true });
+                document.addEventListener('DOMContentLoaded', () => {
+                    applyThemeLogos(document);
+                    themeLogoObserver.disconnect();
+                }, { once: true });
+
+                const settingsStore = readJson('dashboardSettingsByUser');
+                const controls = (settingsStore[userKey] && settingsStore[userKey].controls) || {};
+                const accentChoice = String(controls['id:accent-color-select'] || localStorage.getItem('accentColor') || 'emerald').trim().toLowerCase();
+
+                const palettes = {
+                    emerald: { emerald: '#059669', emeraldLight: '#34d399', gold: '#d4a574', goldLight: '#e8c9a0' },
+                    white: { emerald: '#e5e7eb', emeraldLight: '#ffffff', gold: '#cbd5e1', goldLight: '#f8fafc' },
+                    blue: { emerald: '#2563eb', emeraldLight: '#60a5fa', gold: '#38bdf8', goldLight: '#93c5fd' },
+                    sky: { emerald: '#0284c7', emeraldLight: '#38bdf8', gold: '#7dd3fc', goldLight: '#bae6fd' },
+                    cyan: { emerald: '#0891b2', emeraldLight: '#22d3ee', gold: '#67e8f9', goldLight: '#cffafe' },
+                    teal: { emerald: '#0f766e', emeraldLight: '#2dd4bf', gold: '#5eead4', goldLight: '#ccfbf1' },
+                    mint: { emerald: '#10b981', emeraldLight: '#6ee7b7', gold: '#a7f3d0', goldLight: '#d1fae5' },
+                    lime: { emerald: '#65a30d', emeraldLight: '#a3e635', gold: '#bef264', goldLight: '#ecfccb' },
+                    amber: { emerald: '#d97706', emeraldLight: '#fbbf24', gold: '#f59e0b', goldLight: '#fde68a' },
+                    purple: { emerald: '#7c3aed', emeraldLight: '#a78bfa', gold: '#c084fc', goldLight: '#ddd6fe' },
+                    indigo: { emerald: '#4338ca', emeraldLight: '#818cf8', gold: '#a5b4fc', goldLight: '#e0e7ff' },
+                    violet: { emerald: '#6d28d9', emeraldLight: '#8b5cf6', gold: '#c4b5fd', goldLight: '#ede9fe' },
+                    orange: { emerald: '#ea580c', emeraldLight: '#fb923c', gold: '#f59e0b', goldLight: '#fcd34d' },
+                    red: { emerald: '#dc2626', emeraldLight: '#f87171', gold: '#fb7185', goldLight: '#fecdd3' },
+                    rose: { emerald: '#e11d48', emeraldLight: '#fb7185', gold: '#fda4af', goldLight: '#ffe4e6' },
+                    pink: { emerald: '#db2777', emeraldLight: '#f472b6', gold: '#f43f5e', goldLight: '#fda4af' },
+                    magenta: { emerald: '#c026d3', emeraldLight: '#e879f9', gold: '#f0abfc', goldLight: '#fae8ff' },
+                    copper: { emerald: '#b45309', emeraldLight: '#f59e0b', gold: '#fbbf24', goldLight: '#fde68a' },
+                    slate: { emerald: '#334155', emeraldLight: '#64748b', gold: '#94a3b8', goldLight: '#cbd5e1' }
+                };
+
+                const hexToRgb = (hexColor) => {
+                    const value = String(hexColor || '').replace('#', '');
+                    if (value.length !== 6) {
+                        return '5, 150, 105';
+                    }
+                    const red = Number.parseInt(value.slice(0, 2), 16);
+                    const green = Number.parseInt(value.slice(2, 4), 16);
+                    const blue = Number.parseInt(value.slice(4, 6), 16);
+                    if (!Number.isFinite(red) || !Number.isFinite(green) || !Number.isFinite(blue)) {
+                        return '5, 150, 105';
+                    }
+                    return `${red}, ${green}, ${blue}`;
+                };
+
+                const palette = palettes[accentChoice] || palettes.emerald;
+                root.style.setProperty('--emerald', palette.emerald);
+                root.style.setProperty('--emerald-light', palette.emeraldLight);
+                root.style.setProperty('--gold', palette.gold);
+                root.style.setProperty('--gold-light', palette.goldLight);
+                root.style.setProperty('--accent-rgb', hexToRgb(palette.emerald));
+                root.style.setProperty('--accent-light-rgb', hexToRgb(palette.emeraldLight));
+                root.setAttribute('data-accent-color', palettes[accentChoice] ? accentChoice : 'emerald');
+            } catch (_error) {
+                document.documentElement.setAttribute('data-theme', 'beach');
+            }
+        })();
+    </script>
     <style>
+        :root {
+            --portal-shell-max: 1320px;
+            --portal-text-muted: rgba(226, 232, 240, 0.78);
+            --portal-card-bg: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.56));
+            --portal-card-border: rgba(148, 163, 184, 0.18);
+            --portal-card-shadow: 0 24px 60px rgba(2, 6, 23, 0.32);
+            --portal-item-bg: rgba(255, 255, 255, 0.05);
+            --portal-item-border: rgba(148, 163, 184, 0.16);
+            --portal-banner-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(var(--accent-rgb), 0.26));
+            --portal-banner-border: rgba(var(--accent-light-rgb), 0.28);
+            --portal-hero-glow: radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.28), transparent 48%);
+            --portal-hero-secondary: radial-gradient(circle at bottom left, rgba(244, 114, 182, 0.18), transparent 42%);
+            --portal-chip-bg: rgba(var(--accent-rgb), 0.18);
+            --portal-chip-border: rgba(var(--accent-light-rgb), 0.24);
+            --portal-input-bg: rgba(255, 255, 255, 0.08);
+            --portal-input-border: rgba(148, 163, 184, 0.24);
+            --portal-topbar-bg: rgba(15, 23, 42, 0.34);
+            --portal-topbar-border: rgba(148, 163, 184, 0.14);
+            --portal-outline: rgba(var(--accent-light-rgb), 0.34);
+        }
+
+        [data-theme="light"],
+        [data-theme="beach"],
+        [data-theme="cloud"] {
+            --portal-text-muted: rgba(51, 65, 85, 0.76);
+            --portal-card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.82));
+            --portal-card-border: rgba(148, 163, 184, 0.18);
+            --portal-card-shadow: 0 22px 56px rgba(148, 163, 184, 0.18);
+            --portal-item-bg: rgba(255, 255, 255, 0.74);
+            --portal-item-border: rgba(148, 163, 184, 0.18);
+            --portal-banner-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(var(--accent-rgb), 0.12));
+            --portal-banner-border: rgba(var(--accent-rgb), 0.2);
+            --portal-hero-glow: radial-gradient(circle at top right, rgba(var(--accent-rgb), 0.18), transparent 48%);
+            --portal-hero-secondary: radial-gradient(circle at bottom left, rgba(251, 191, 36, 0.16), transparent 46%);
+            --portal-chip-bg: rgba(var(--accent-rgb), 0.1);
+            --portal-chip-border: rgba(var(--accent-rgb), 0.18);
+            --portal-input-bg: rgba(255, 255, 255, 0.88);
+            --portal-input-border: rgba(148, 163, 184, 0.22);
+            --portal-topbar-bg: rgba(255, 255, 255, 0.68);
+            --portal-topbar-border: rgba(148, 163, 184, 0.16);
+        }
+
+        [data-theme="space"] {
+            --portal-card-bg: linear-gradient(180deg, rgba(4, 9, 24, 0.84), rgba(8, 15, 38, 0.78));
+            --portal-card-border: rgba(120, 190, 255, 0.18);
+            --portal-card-shadow: 0 28px 72px rgba(2, 6, 23, 0.56);
+            --portal-item-bg: rgba(9, 18, 43, 0.72);
+            --portal-item-border: rgba(96, 165, 250, 0.18);
+            --portal-banner-bg: linear-gradient(135deg, rgba(9, 18, 43, 0.9), rgba(37, 99, 235, 0.24));
+            --portal-banner-border: rgba(96, 165, 250, 0.22);
+            --portal-hero-glow: radial-gradient(circle at top right, rgba(34, 211, 238, 0.22), transparent 44%);
+            --portal-hero-secondary: radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.22), transparent 38%);
+            --portal-chip-bg: rgba(59, 130, 246, 0.16);
+            --portal-chip-border: rgba(96, 165, 250, 0.24);
+            --portal-input-bg: rgba(7, 15, 35, 0.9);
+            --portal-input-border: rgba(96, 165, 250, 0.22);
+            --portal-topbar-bg: rgba(5, 12, 29, 0.62);
+            --portal-topbar-border: rgba(96, 165, 250, 0.18);
+        }
+
+        [data-theme="cyberpunk"] {
+            --portal-card-bg: linear-gradient(180deg, rgba(16, 4, 34, 0.82), rgba(10, 11, 39, 0.8));
+            --portal-card-border: rgba(244, 114, 182, 0.22);
+            --portal-item-bg: rgba(25, 10, 51, 0.7);
+            --portal-item-border: rgba(34, 211, 238, 0.18);
+            --portal-banner-bg: linear-gradient(135deg, rgba(32, 9, 66, 0.9), rgba(236, 72, 153, 0.18));
+            --portal-banner-border: rgba(34, 211, 238, 0.22);
+            --portal-hero-glow: radial-gradient(circle at top right, rgba(34, 211, 238, 0.22), transparent 42%);
+            --portal-hero-secondary: radial-gradient(circle at bottom left, rgba(244, 114, 182, 0.22), transparent 40%);
+            --portal-chip-bg: rgba(244, 114, 182, 0.14);
+            --portal-chip-border: rgba(34, 211, 238, 0.22);
+        }
+
+        [data-theme="swamp"] {
+            --portal-card-bg: linear-gradient(180deg, rgba(17, 31, 19, 0.84), rgba(25, 46, 28, 0.78));
+            --portal-card-border: rgba(132, 204, 22, 0.16);
+            --portal-item-bg: rgba(24, 38, 24, 0.72);
+            --portal-item-border: rgba(163, 230, 53, 0.16);
+            --portal-banner-bg: linear-gradient(135deg, rgba(24, 38, 24, 0.9), rgba(133, 77, 14, 0.22));
+            --portal-hero-secondary: radial-gradient(circle at bottom left, rgba(234, 179, 8, 0.14), transparent 42%);
+        }
+
+        [data-theme="japan"] {
+            --portal-card-bg: linear-gradient(180deg, rgba(42, 13, 18, 0.78), rgba(88, 24, 39, 0.72));
+            --portal-card-border: rgba(253, 164, 175, 0.18);
+            --portal-item-bg: rgba(87, 24, 39, 0.56);
+            --portal-item-border: rgba(253, 186, 116, 0.2);
+            --portal-banner-bg: linear-gradient(135deg, rgba(70, 15, 27, 0.9), rgba(251, 146, 60, 0.18));
+        }
+
+        [data-theme="christmas"] {
+            --portal-card-bg: linear-gradient(180deg, rgba(18, 55, 39, 0.8), rgba(91, 18, 35, 0.76));
+            --portal-card-border: rgba(250, 204, 21, 0.18);
+            --portal-item-bg: rgba(65, 17, 29, 0.42);
+            --portal-item-border: rgba(187, 247, 208, 0.18);
+            --portal-banner-bg: linear-gradient(135deg, rgba(18, 55, 39, 0.9), rgba(127, 29, 29, 0.28));
+        }
+
         body {
             min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .portal-page-shell[hidden] {
+            display: none !important;
+        }
+
+        .portal-page-shell[data-portal-mode="public"] .main-content {
+            margin-left: 0;
+            width: 100%;
         }
 
         .portal-shell {
-            max-width: 1320px;
+            max-width: var(--portal-shell-max);
+            width: 100%;
             margin: 0 auto;
-            padding: 32px 18px 80px;
+            padding: 28px 20px 80px;
+            position: relative;
+        }
+
+        .portal-shell::before {
+            content: '';
+            position: absolute;
+            inset: 12px 12px auto;
+            height: 220px;
+            border-radius: 32px;
+            background: var(--portal-hero-glow), var(--portal-hero-secondary);
+            filter: blur(2px);
+            opacity: 0.96;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .portal-topbar,
+        .portal-status-banner,
+        .portal-hero,
+        .portal-grid,
+        .site-legal-footer {
+            position: relative;
+            z-index: 1;
         }
 
         .portal-topbar {
@@ -25,8 +311,14 @@
             justify-content: space-between;
             gap: 16px;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
             flex-wrap: wrap;
+            padding: 16px 18px;
+            border-radius: 24px;
+            border: 1px solid var(--portal-topbar-border);
+            background: var(--portal-topbar-bg);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.16);
         }
 
         .portal-brand {
@@ -35,75 +327,133 @@
             gap: 14px;
             text-decoration: none;
             color: inherit;
+            padding-right: 12px;
         }
 
-        .portal-brand img {
-            width: 60px;
-            height: 60px;
+        .portal-brand-logo {
+            width: 72px;
+            height: 72px;
             object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(15, 23, 42, 0.22));
+        }
+
+        .portal-brand-copy {
+            display: grid;
+            gap: 4px;
+        }
+
+        .portal-brand-title {
+            font-size: clamp(1.05rem, 2vw, 1.35rem);
+            letter-spacing: 0.02em;
         }
 
         .portal-eyebrow {
             font-size: 12px;
             letter-spacing: 0.2em;
             text-transform: uppercase;
-            color: var(--text-secondary);
+            color: var(--portal-text-muted);
         }
 
         .portal-hero {
             display: grid;
             grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.9fr);
-            gap: 18px;
-            margin-bottom: 18px;
+            gap: 20px;
+            margin-bottom: 22px;
         }
 
         .portal-title {
-            margin: 6px 0 10px;
+            margin: 8px 0 12px;
             font-size: clamp(2rem, 4vw, 3.25rem);
+            line-height: 0.98;
+            letter-spacing: -0.04em;
         }
 
         .portal-subtitle {
             margin: 0;
-            color: var(--text-secondary);
+            color: var(--portal-text-muted);
             max-width: 70ch;
+            font-size: 1.02rem;
+            line-height: 1.6;
         }
 
         .portal-badges {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
-            margin-top: 16px;
+            margin-top: 20px;
         }
 
         .portal-badge {
-            border: 1px solid rgba(var(--accent-light-rgb), 0.26);
-            background: rgba(var(--accent-rgb), 0.14);
+            border: 1px solid var(--portal-chip-border);
+            background: var(--portal-chip-bg);
             border-radius: 999px;
-            padding: 8px 12px;
+            padding: 10px 14px;
             font-size: 12px;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
         .portal-grid {
             display: grid;
             grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.95fr);
-            gap: 18px;
+            gap: 20px;
         }
 
         .portal-column,
         .portal-side {
             display: grid;
-            gap: 18px;
+            gap: 20px;
         }
 
         .portal-card {
-            padding: 22px;
+            padding: 24px;
+            border-radius: 28px;
+            border: 1px solid var(--portal-card-border);
+            background: var(--portal-card-bg);
+            box-shadow: var(--portal-card-shadow);
+            backdrop-filter: blur(18px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .portal-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.24), transparent 70%);
+            pointer-events: none;
+        }
+
+        .portal-hero-card {
+            padding: 32px;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .portal-hero-card::after {
+            content: '';
+            position: absolute;
+            inset: auto -10% -28% auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(var(--accent-light-rgb), 0.3), transparent 68%);
+            pointer-events: none;
+        }
+
+        .portal-snapshot-card {
+            background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 56%);
         }
 
         .portal-section-title {
-            margin: 0 0 10px;
-            font-size: 1.15rem;
+            margin: 0 0 14px;
+            font-size: 1.08rem;
+            letter-spacing: 0.02em;
         }
 
         .portal-meta-list,
@@ -118,10 +468,29 @@
         .portal-document-item,
         .portal-event,
         .portal-sms-item {
-            padding: 14px 16px;
-            border-radius: 16px;
-            border: 1px solid rgba(148, 163, 184, 0.16);
-            background: rgba(255, 255, 255, 0.04);
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid var(--portal-item-border);
+            background: var(--portal-item-bg);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .portal-meta-item:hover,
+        .portal-document-item:hover,
+        .portal-event:hover,
+        .portal-sms-item:hover {
+            transform: translateY(-1px);
+            border-color: var(--portal-outline);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 28px rgba(15, 23, 42, 0.12);
+        }
+
+        .portal-meta-item strong,
+        .portal-document-item strong,
+        .portal-event strong,
+        .portal-sms-item strong {
+            display: inline-block;
+            margin-bottom: 4px;
         }
 
         .portal-document-row,
@@ -136,16 +505,20 @@
 
         .portal-empty {
             margin: 0;
-            color: var(--text-secondary);
+            color: var(--portal-text-muted);
+            line-height: 1.6;
         }
 
         .portal-status-banner {
-            margin-bottom: 18px;
-            padding: 14px 16px;
-            border-radius: 16px;
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            background: rgba(15, 23, 42, 0.42);
+            margin-bottom: 22px;
+            padding: 16px 18px;
+            border-radius: 22px;
+            border: 1px solid var(--portal-banner-border);
+            background: var(--portal-banner-bg);
             color: var(--text-primary);
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            box-shadow: 0 20px 44px rgba(15, 23, 42, 0.14);
         }
 
         .portal-status-banner.is-error {
@@ -174,16 +547,27 @@
         .portal-textarea,
         .portal-select {
             width: 100%;
-            border-radius: 14px;
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            background: rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            border: 1px solid var(--portal-input-border);
+            background: var(--portal-input-bg);
             color: var(--text-primary);
-            padding: 12px 14px;
+            padding: 13px 15px;
             font: inherit;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+        }
+
+        .portal-inline-input:focus,
+        .portal-textarea:focus,
+        .portal-select:focus {
+            outline: none;
+            border-color: var(--portal-outline);
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18);
+            transform: translateY(-1px);
         }
 
         .portal-textarea {
-            min-height: 118px;
+            min-height: 132px;
             resize: vertical;
         }
 
@@ -191,7 +575,7 @@
             display: grid;
             gap: 6px;
             font-size: 13px;
-            color: var(--text-secondary);
+            color: var(--portal-text-muted);
         }
 
         .portal-share-link {
@@ -206,16 +590,120 @@
             flex-wrap: wrap;
         }
 
+        .portal-doc-actions .card-btn,
+        .portal-actions .card-btn {
+            border-radius: 999px;
+            padding-inline: 16px;
+        }
+
+        .portal-actions .card-btn.active {
+            box-shadow: 0 18px 32px rgba(var(--accent-rgb), 0.22);
+        }
+
+        .portal-note-group {
+            display: grid;
+            gap: 12px;
+        }
+
+        .portal-event {
+            position: relative;
+        }
+
+        .portal-event::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 16px;
+            bottom: 16px;
+            width: 3px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(var(--accent-light-rgb), 0.9), rgba(var(--accent-rgb), 0.18));
+        }
+
+        .portal-event-head,
+        .portal-sms-head {
+            padding-left: 10px;
+        }
+
+        .portal-event > div:not(.portal-event-head),
+        .portal-sms-item > div:not(.portal-sms-head) {
+            padding-left: 10px;
+        }
+
+        .portal-document-item .portal-doc-actions {
+            align-items: center;
+        }
+
+        .site-legal-footer {
+            margin-top: 28px;
+        }
+
         .portal-admin-only[hidden],
         .portal-public-only[hidden] {
             display: none !important;
         }
 
+        @media (max-width: 1200px) {
+            .portal-shell {
+                padding-inline: 18px;
+            }
+
+            .portal-hero-card {
+                min-height: 0;
+            }
+        }
+
         @media (max-width: 980px) {
+            .portal-shell {
+                padding-top: 22px;
+            }
+
             .portal-hero,
             .portal-grid,
             .portal-form-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .portal-topbar {
+                padding: 14px;
+            }
+
+            .portal-brand-logo {
+                width: 62px;
+                height: 62px;
+            }
+
+            .portal-card,
+            .portal-hero-card {
+                padding: 22px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .portal-shell {
+                padding: 18px 14px 64px;
+            }
+
+            .portal-topbar {
+                gap: 14px;
+                border-radius: 20px;
+            }
+
+            .portal-brand {
+                align-items: flex-start;
+            }
+
+            .portal-title {
+                font-size: clamp(1.8rem, 9vw, 2.5rem);
+            }
+
+            .portal-actions {
+                width: 100%;
+            }
+
+            .portal-actions .card-btn {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -226,13 +714,193 @@
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
 
-    <main class="portal-shell">
+    <div class="dashboard portal-page-shell" id="portal-page-shell">
+        <aside class="sidebar" id="sidebar" hidden>
+            <div class="sidebar-header">
+                <div class="logo"><img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="logo-img"></div>
+                <span class="logo-text">FAST BRIDGE GROUP LLC</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-section">
+                    <span class="nav-section-title">Main Menu</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="dashboard.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="analytics.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                Analytics
+                                <span class="nav-badge" data-analytics-nav-badge="true" hidden>New</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fire" aria-hidden="true"></span>
+                                MLS Hot Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="mls-search.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="7"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                MLS Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="my-agents.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="9" cy="7" r="4"/>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                My Agents
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="deals.html" class="nav-link">
+                                <span class="nav-icon nav-icon-deals" aria-hidden="true"></span>
+                                My Deals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="gmail.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                                    <path d="M3 7l9 6 9-6"/>
+                                </svg>
+                                Gmail
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="campaigns.html" class="nav-link">
+                                <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
+                                Twilio Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="community.html" class="nav-link">
+                                <span class="nav-icon nav-icon-community" aria-hidden="true"></span>
+                                Community
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-messages.html" class="nav-link">
+                                <span class="nav-icon nav-icon-text-bubble" aria-hidden="true"></span>
+                                FBG Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="fbg-studio.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-studio" aria-hidden="true"></span>
+                                Recording Studio
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="users.html" class="nav-link">
+                                <span class="nav-icon nav-icon-agent-workspace" aria-hidden="true"></span>
+                                Agent workspace
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="word-document-maker.html" class="nav-link">
+                                <span class="nav-icon nav-icon-fbg-word" aria-hidden="true"></span>
+                                Page Processor
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="trainings.html" class="nav-link">
+                                <span class="nav-icon nav-icon-training" aria-hidden="true"></span>
+                                Trainings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="settings.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-section">
+                    <span class="nav-section-title">Account</span>
+                    <ul>
+                        <li class="nav-item">
+                            <a href="admin-controls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                    <path d="M8 20h8"/>
+                                    <path d="M12 16v4"/>
+                                </svg>
+                                Admin Controls
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="active-buyers.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 5h18"/>
+                                    <path d="M3 12h18"/>
+                                    <path d="M3 19h18"/>
+                                </svg>
+                                Active Buyers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="login.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-btn">
+                    <div class="user-avatar">TM</div>
+                    <div class="user-info">
+                        <div class="user-name">TemplateMo</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+    <div class="portal-shell">
         <div class="portal-topbar">
             <a class="portal-brand" href="index.html">
-                <img src="png photos/FAST LOGO 777.png" alt="FAST logo">
-                <div>
+                <img src="png photos/FAST LOGO 777.png" alt="FAST logo" class="portal-brand-logo logo-img">
+                <div class="portal-brand-copy">
                     <div class="portal-eyebrow">Private Deal Portal</div>
-                    <strong>FAST BRIDGE GROUP LLC</strong>
+                    <strong class="portal-brand-title">FAST BRIDGE GROUP LLC</strong>
                 </div>
             </a>
             <div class="portal-actions">
@@ -244,7 +912,7 @@
         <div id="portal-status-banner" class="portal-status-banner">Loading portal...</div>
 
         <section class="portal-hero">
-            <article class="glass-card portal-card">
+            <article class="glass-card portal-card portal-hero-card">
                 <div class="portal-eyebrow" id="portal-type-label">Portal</div>
                 <h1 id="portal-title" class="portal-title">Loading...</h1>
                 <p id="portal-subtitle" class="portal-subtitle">We are preparing your status, documents, and communication history.</p>
@@ -255,7 +923,7 @@
                 </div>
             </article>
 
-            <article class="glass-card portal-card">
+            <article class="glass-card portal-card portal-snapshot-card">
                 <h2 class="portal-section-title">Portal Snapshot</h2>
                 <div class="portal-meta-list" id="portal-snapshot-list"></div>
             </article>
@@ -263,9 +931,9 @@
 
         <section class="portal-grid">
             <div class="portal-column">
-                <article class="glass-card portal-card">
+                <article class="glass-card portal-card portal-notes-card">
                     <h2 class="portal-section-title">Deal Notes</h2>
-                    <div class="portal-meta-list">
+                    <div class="portal-note-group">
                         <div class="portal-meta-item">
                             <strong>Current Summary</strong>
                             <p id="portal-summary" class="portal-empty"></p>
@@ -277,29 +945,29 @@
                     </div>
                 </article>
 
-                <article class="glass-card portal-card">
+                <article class="glass-card portal-card portal-timeline-card">
                     <h2 class="portal-section-title">Portal Timeline</h2>
                     <div id="portal-timeline" class="portal-timeline"></div>
                 </article>
 
-                <article class="glass-card portal-card">
+                <article class="glass-card portal-card portal-history-card">
                     <h2 class="portal-section-title">Communication History</h2>
                     <div id="portal-sms-history" class="portal-sms-list"></div>
                 </article>
             </div>
 
             <aside class="portal-side">
-                <article class="glass-card portal-card">
+                <article class="glass-card portal-card portal-documents-card">
                     <h2 class="portal-section-title">Documents</h2>
                     <div id="portal-documents" class="portal-document-list"></div>
                 </article>
 
-                <article class="glass-card portal-card">
+                <article class="glass-card portal-card portal-contact-card">
                     <h2 class="portal-section-title">Contact</h2>
                     <div id="portal-contact" class="portal-meta-list"></div>
                 </article>
 
-                <article class="glass-card portal-card portal-admin-only" id="portal-admin-card" hidden>
+                <article class="glass-card portal-card portal-manage-card portal-admin-only" id="portal-admin-card" hidden>
                     <h2 class="portal-section-title">Manage Portal</h2>
                     <form id="portal-admin-form" class="portal-form">
                         <div class="portal-form-grid">
@@ -338,7 +1006,7 @@
                     </form>
                 </article>
 
-                <article class="glass-card portal-card portal-admin-only" id="portal-upload-card" hidden>
+                <article class="glass-card portal-card portal-upload-card portal-admin-only" id="portal-upload-card" hidden>
                     <h2 class="portal-section-title">Upload Documents</h2>
                     <form id="portal-upload-form" class="portal-form">
                         <input id="portal-upload-input" class="portal-inline-input" type="file">
@@ -348,7 +1016,7 @@
                     </form>
                 </article>
 
-                <article class="glass-card portal-card portal-admin-only" id="portal-activity-card" hidden>
+                <article class="glass-card portal-card portal-activity-card portal-admin-only" id="portal-activity-card" hidden>
                     <h2 class="portal-section-title">Log Update</h2>
                     <form id="portal-activity-form" class="portal-form">
                         <div class="portal-form-grid">
@@ -382,7 +1050,7 @@
                     </form>
                 </article>
 
-                <article class="glass-card portal-card portal-public-only" id="portal-message-card" hidden>
+                <article class="glass-card portal-card portal-message-card portal-public-only" id="portal-message-card" hidden>
                     <h2 class="portal-section-title">Send Update Request</h2>
                     <form id="portal-message-form" class="portal-form">
                         <label class="portal-label">Your name
@@ -420,7 +1088,9 @@
         </div>
     </div>
 </footer>
+</div>
 </main>
+</div>
 
     <script>
         (function () {
@@ -428,6 +1098,8 @@
             const portalId = String(params.get('portal') || '').trim();
             const accessToken = String(params.get('access') || '').trim();
             const isAdminMode = Boolean(portalId);
+            const pageShell = document.getElementById('portal-page-shell');
+            const sidebar = document.getElementById('sidebar');
             const statusBanner = document.getElementById('portal-status-banner');
             const dashboardLink = document.getElementById('portal-dashboard-link');
             const copyLinkButton = document.getElementById('portal-copy-link');
@@ -443,7 +1115,67 @@
             const activityForm = document.getElementById('portal-activity-form');
             const messageForm = document.getElementById('portal-message-form');
             const shareLink = document.getElementById('portal-share-link');
+            const userNameNode = document.querySelector('.user-name');
+            const userRoleNode = document.querySelector('.user-role');
+            const userAvatarNode = document.querySelector('.user-avatar');
             const state = { portal: null };
+
+            if (pageShell) {
+                pageShell.hidden = false;
+                pageShell.setAttribute('data-portal-mode', isAdminMode ? 'admin' : 'public');
+            }
+            if (sidebar) {
+                sidebar.hidden = !isAdminMode;
+            }
+
+            function safeReadJson(key) {
+                try {
+                    return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || 'null');
+                } catch (_error) {
+                    return null;
+                }
+            }
+
+            function getStoredUser() {
+                const localUser = safeReadJson('user');
+                if (localUser && typeof localUser === 'object') {
+                    return localUser;
+                }
+                const profileUser = safeReadJson('userProfile');
+                return profileUser && typeof profileUser === 'object' ? profileUser : null;
+            }
+
+            function formatRoleLabel(value) {
+                return String(value || 'User')
+                    .replace(/[-_]+/g, ' ')
+                    .replace(/\b\w/g, (match) => match.toUpperCase());
+            }
+
+            function applyStoredUserChrome() {
+                const user = getStoredUser();
+                if (!user) {
+                    return;
+                }
+
+                if (userNameNode) {
+                    userNameNode.textContent = String(user.name || 'FAST User').trim() || 'FAST User';
+                }
+                if (userRoleNode) {
+                    userRoleNode.textContent = formatRoleLabel(user.role || (isAdminMode ? 'admin' : 'client'));
+                }
+                if (userAvatarNode) {
+                    const initials = String(user.name || 'FAST User')
+                        .trim()
+                        .split(/\s+/)
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part.charAt(0).toUpperCase())
+                        .join('') || 'FU';
+                    userAvatarNode.textContent = initials;
+                }
+            }
+
+            applyStoredUserChrome();
 
             function getAuthToken() {
                 return String(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
@@ -606,6 +1338,7 @@
 
             function renderPortal(portal) {
                 state.portal = portal;
+                document.documentElement.setAttribute('data-portal-type', portal.portalType === 'investor' ? 'investor' : 'seller');
                 document.getElementById('portal-type-label').textContent = portal.portalType === 'investor' ? 'Investor Portal' : 'Seller Portal';
                 document.getElementById('portal-title').textContent = portal.title || 'Deal portal';
                 document.getElementById('portal-subtitle').textContent = portal.summary || 'Status updates, files, and communications will show here.';

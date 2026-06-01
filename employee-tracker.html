@@ -40,6 +40,12 @@
                 const isSidebarCollapsed = Boolean(sidebarState && typeof sidebarState === 'object' ? sidebarState.collapsed : sidebarState);
                 root.setAttribute('data-sidebar-collapsed', isSidebarCollapsed ? 'on' : 'off');
 
+                const searchParams = new URLSearchParams(window.location.search || '');
+                const embedMode = String(searchParams.get('embed') || '').trim().toLowerCase();
+                if (embedMode === 'widget') {
+                    root.setAttribute('data-embed-mode', 'widget');
+                }
+
                 const themeStore = readJson('dashboardThemeByUser');
                 const normalizedNameKey = name.toLowerCase().replace(/\s+/g, '-');
                 const candidateThemeKeys = Array.from(new Set([userKey, email, normalizedNameKey, 'default-user'].filter(Boolean)));
@@ -64,6 +70,7 @@
                 const themeLogoPaths = {
                     christmas: 'png photos/Christmas Theme Logo.png',
                     swamp: 'png photos/Swamp Theme Logo.png',
+                    space: 'png photos/Night theme logo.png',
                     cyberpunk: 'png photos/CYBERPUNK LOGO.png',
                     japan: 'png photos/Japan Theme Mode Logo.png'
                 };
@@ -158,6 +165,7 @@
 
         .employee-sheet-table-wrap {
             overflow: auto;
+            scrollbar-width: none;
             border-radius: 22px;
             border: 1px solid var(--employee-sheet-border);
             background: var(--employee-sheet-surface);
@@ -165,8 +173,8 @@
         }
 
         .employee-sheet-table-wrap::-webkit-scrollbar {
-            width: 12px;
-            height: 12px;
+            width: 0;
+            height: 0;
         }
 
         .employee-sheet-table-wrap::-webkit-scrollbar-thumb {
@@ -179,6 +187,92 @@
         .employee-sheet-table-wrap::-webkit-scrollbar-track {
             background: var(--employee-sheet-scroll-track);
             border-radius: 999px;
+        }
+
+        .employee-sheet-scroll-rail {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 10px 14px;
+            margin: 0 0 12px;
+            border: 1px solid color-mix(in srgb, var(--employee-sheet-border) 72%, rgb(var(--accent-light-rgb, 52, 211, 153) / 0.18) 28%);
+            border-radius: 999px;
+            background:
+                radial-gradient(circle at left center, rgb(var(--accent-light-rgb, 52, 211, 153) / 0.16), transparent 34%),
+                linear-gradient(135deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03));
+            box-shadow:
+                inset 0 1px 0 rgb(255 255 255 / 0.08),
+                0 18px 32px -26px rgb(0 0 0 / 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .employee-sheet-scroll-rail.is-bottom {
+            margin: 12px 0 0;
+        }
+
+        .employee-sheet-scroll-rail-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgb(255 255 255 / 0.07);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .employee-sheet-scroll-rail-label svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.88;
+        }
+
+        .employee-sheet-scroll-rail-track {
+            position: relative;
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: auto;
+            scrollbar-color: var(--employee-sheet-scroll-thumb) transparent;
+            cursor: ew-resize;
+        }
+
+        .employee-sheet-scroll-rail-track::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .employee-sheet-scroll-rail-track::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, rgb(var(--accent-rgb, 5, 150, 105) / 0.72), rgb(var(--accent-light-rgb, 52, 211, 153) / 0.88));
+            border-radius: 999px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .employee-sheet-scroll-rail-track::-webkit-scrollbar-track {
+            background: linear-gradient(90deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
+            border-radius: 999px;
+        }
+
+        .employee-sheet-scroll-rail-track::before {
+            content: '';
+            position: absolute;
+            inset: 50% 0 auto;
+            height: 1px;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, transparent, rgb(var(--accent-light-rgb, 52, 211, 153) / 0.34), transparent);
+            pointer-events: none;
+        }
+
+        .employee-sheet-scroll-rail-spacer {
+            height: 1px;
         }
 
         .employee-sheet-table {
@@ -458,6 +552,58 @@
             max-width: 760px;
         }
 
+        html[data-embed-mode="widget"] body {
+            min-height: auto;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        html[data-embed-mode="widget"] .background,
+        html[data-embed-mode="widget"] .orb,
+        html[data-embed-mode="widget"] .sidebar,
+        html[data-embed-mode="widget"] .navbar,
+        html[data-embed-mode="widget"] .site-legal-footer,
+        html[data-embed-mode="widget"] .employee-sheet-note {
+            display: none !important;
+        }
+
+        html[data-embed-mode="widget"] .dashboard {
+            display: block;
+            min-height: auto;
+            background: transparent;
+        }
+
+        html[data-embed-mode="widget"] .main-content {
+            width: 100%;
+            max-width: none;
+            margin: 0;
+            padding: 0;
+            min-height: auto;
+            background: transparent;
+        }
+
+        html[data-embed-mode="widget"] .employee-sheet-wrap {
+            padding: 0;
+        }
+
+        html[data-embed-mode="widget"] .employee-sheet-card {
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            padding: 0;
+        }
+
+        html[data-embed-mode="widget"] .employee-sheet-header {
+            gap: 14px;
+        }
+
+        html[data-embed-mode="widget"] .employee-sheet-table-wrap {
+            border-radius: 18px;
+        }
+
         @media (max-width: 900px) {
             .employee-sheet-wrap {
                 padding: 18px;
@@ -470,6 +616,23 @@
             .employee-sheet-actions {
                 width: 100%;
                 justify-content: flex-start;
+            }
+
+            .employee-sheet-scroll-rail {
+                padding: 10px 12px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .employee-sheet-scroll-rail {
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .employee-sheet-scroll-rail-label {
+                padding: 7px 10px;
+                font-size: 10px;
+                letter-spacing: 0.1em;
             }
         }
     </style>
@@ -550,8 +713,18 @@
                         </div>
                     </div>
 
-                    <div class="employee-sheet-table-wrap">
-                        <table class="employee-sheet-table">
+                    <div class="employee-sheet-scroll-rail is-top" aria-label="Top horizontal scroll for Employee Tracker">
+                        <span class="employee-sheet-scroll-rail-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"></path><path d="M9 7l-5 5 5 5"></path><path d="M15 7l5 5-5 5"></path></svg>
+                            Slide Columns
+                        </span>
+                        <div id="employee-sheet-top-scroll-track" class="employee-sheet-scroll-rail-track" role="scrollbar" aria-controls="employee-sheet-table" aria-label="Top horizontal Employee Tracker scroll">
+                            <div id="employee-sheet-top-scroll-spacer" class="employee-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                        </div>
+                    </div>
+
+                    <div id="employee-sheet-table-wrap" class="employee-sheet-table-wrap">
+                        <table id="employee-sheet-table" class="employee-sheet-table">
                             <thead>
                                 <tr>
                                     <th>Employment Status</th>
@@ -574,6 +747,16 @@
                         </table>
                     </div>
 
+                    <div class="employee-sheet-scroll-rail is-bottom" aria-label="Bottom horizontal scroll for Employee Tracker">
+                        <span class="employee-sheet-scroll-rail-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"></path><path d="M9 7l-5 5 5 5"></path><path d="M15 7l5 5-5 5"></path></svg>
+                            Scroll Rail
+                        </span>
+                        <div id="employee-sheet-bottom-scroll-track" class="employee-sheet-scroll-rail-track" role="scrollbar" aria-controls="employee-sheet-table" aria-label="Bottom horizontal Employee Tracker scroll">
+                            <div id="employee-sheet-bottom-scroll-spacer" class="employee-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                        </div>
+                    </div>
+
                     <p class="employee-sheet-note">Tip: this page is intentionally not added as a separate main-menu tab. Admins reach it from Admin Controls only, and every saved edit updates the single shared admin employee sheet. Use the license and brokerage fields to track each agent's DRE license and the broker license number when they are a broker.</p>
                 </div>
             </section>
@@ -592,12 +775,18 @@
     <script>
         (function () {
             const body = document.getElementById('employee-sheet-body');
+            const tableWrap = document.getElementById('employee-sheet-table-wrap');
+            const tableElement = document.getElementById('employee-sheet-table');
+            const topScrollTrack = document.getElementById('employee-sheet-top-scroll-track');
+            const topScrollSpacer = document.getElementById('employee-sheet-top-scroll-spacer');
+            const bottomScrollTrack = document.getElementById('employee-sheet-bottom-scroll-track');
+            const bottomScrollSpacer = document.getElementById('employee-sheet-bottom-scroll-spacer');
             const addRowBtn = document.getElementById('employee-sheet-add-row');
             const saveCsvBtn = document.getElementById('employee-sheet-save-csv');
             const syncStatus = document.getElementById('employee-sheet-sync-status');
             const lastEdited = document.getElementById('employee-sheet-last-edited');
 
-            if (!body || !addRowBtn || !saveCsvBtn || !syncStatus || !lastEdited) {
+            if (!body || !tableWrap || !tableElement || !topScrollTrack || !topScrollSpacer || !bottomScrollTrack || !bottomScrollSpacer || !addRowBtn || !saveCsvBtn || !syncStatus || !lastEdited) {
                 return;
             }
 
@@ -609,6 +798,76 @@
             let isDirty = false;
             let pollingHandle = null;
             let verifiedAdminUser = null;
+
+            function initEmployeeSheetScrollRails() {
+                let syncingSource = '';
+
+                const syncRailMetrics = () => {
+                    const scrollWidth = Math.max(tableElement.scrollWidth, tableWrap.scrollWidth, tableWrap.clientWidth);
+                    const spacerWidth = `${scrollWidth}px`;
+                    topScrollSpacer.style.width = spacerWidth;
+                    bottomScrollSpacer.style.width = spacerWidth;
+
+                    const maxScrollLeft = Math.max(tableWrap.scrollWidth - tableWrap.clientWidth, 0);
+                    const currentScrollLeft = Math.min(tableWrap.scrollLeft, maxScrollLeft);
+                    topScrollTrack.scrollLeft = currentScrollLeft;
+                    bottomScrollTrack.scrollLeft = currentScrollLeft;
+
+                    const hasOverflow = maxScrollLeft > 0;
+                    if (topScrollTrack.parentElement) {
+                        topScrollTrack.parentElement.hidden = !hasOverflow;
+                    }
+                    if (bottomScrollTrack.parentElement) {
+                        bottomScrollTrack.parentElement.hidden = !hasOverflow;
+                    }
+                };
+
+                const syncFrom = (source) => {
+                    if (syncingSource === source) {
+                        return;
+                    }
+
+                    syncingSource = source;
+
+                    if (source === 'table') {
+                        topScrollTrack.scrollLeft = tableWrap.scrollLeft;
+                        bottomScrollTrack.scrollLeft = tableWrap.scrollLeft;
+                    } else if (source === 'top') {
+                        tableWrap.scrollLeft = topScrollTrack.scrollLeft;
+                        bottomScrollTrack.scrollLeft = topScrollTrack.scrollLeft;
+                    } else if (source === 'bottom') {
+                        tableWrap.scrollLeft = bottomScrollTrack.scrollLeft;
+                        topScrollTrack.scrollLeft = bottomScrollTrack.scrollLeft;
+                    }
+
+                    if (typeof window.requestAnimationFrame === 'function') {
+                        window.requestAnimationFrame(() => {
+                            syncingSource = '';
+                        });
+                    } else {
+                        syncingSource = '';
+                    }
+                };
+
+                tableWrap.addEventListener('scroll', () => syncFrom('table'), { passive: true });
+                topScrollTrack.addEventListener('scroll', () => syncFrom('top'), { passive: true });
+                bottomScrollTrack.addEventListener('scroll', () => syncFrom('bottom'), { passive: true });
+                window.addEventListener('resize', syncRailMetrics);
+
+                if (typeof ResizeObserver === 'function') {
+                    const railObserver = new ResizeObserver(() => syncRailMetrics());
+                    railObserver.observe(tableWrap);
+                    railObserver.observe(tableElement);
+                }
+
+                if (typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(syncRailMetrics);
+                } else {
+                    syncRailMetrics();
+                }
+            }
+
+            initEmployeeSheetScrollRails();
 
             const CSV_HEADERS = [
                 'Employment Status',

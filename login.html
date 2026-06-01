@@ -236,6 +236,38 @@
             color: var(--text-primary);
         }
 
+        html[data-theme='space'] .theme-switch-btn {
+            border-color: rgba(101, 193, 120, 0.24);
+            background:
+                linear-gradient(160deg, rgba(225, 255, 235, 0.05), rgba(225, 255, 235, 0.01)),
+                linear-gradient(135deg, rgba(8, 20, 16, 0.94), rgba(2, 8, 6, 0.94));
+            box-shadow:
+                inset 0 1px 0 rgba(220, 252, 231, 0.06),
+                0 14px 30px rgba(0, 0, 0, 0.42),
+                0 0 0 1px rgba(88, 209, 123, 0.05);
+        }
+
+        html[data-theme='space'] .theme-switch-btn::before {
+            background: linear-gradient(135deg, #58d17b, #8df1a9);
+            box-shadow: 0 0 0 4px rgba(88, 209, 123, 0.16);
+        }
+
+        html[data-theme='space'] .theme-switch-btn:hover,
+        html[data-theme='space'] .theme-switch-btn:focus-visible {
+            border-color: rgba(141, 241, 169, 0.38);
+            background:
+                linear-gradient(160deg, rgba(225, 255, 235, 0.06), rgba(225, 255, 235, 0.012)),
+                linear-gradient(135deg, rgba(10, 24, 19, 0.96), rgba(3, 10, 8, 0.96));
+            box-shadow:
+                inset 0 1px 0 rgba(220, 252, 231, 0.08),
+                0 18px 34px rgba(0, 0, 0, 0.5),
+                0 0 18px rgba(88, 209, 123, 0.08);
+        }
+
+        html[data-theme='space'] .login-brand-logo {
+            filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.34)) drop-shadow(0 0 22px rgba(88, 209, 123, 0.1));
+        }
+
         .login-brand-logo {
             display: block;
             width: min(100%, 190px);
@@ -388,7 +420,7 @@ https://templatemo.com/tm-607-glass-admin
                     Access is admin-managed. Contact an administrator for account setup.
                 </p>
                 <p class="login-footer" style="margin-top:8px;font-size:12px;opacity:0.78;">
-                    <a id="login-version-label" href="version-history.html?source=public" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">Version v1.5.2</a>
+                    <a id="login-version-label" href="version-history.html?source=public" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">Version v1.5.3</a>
                 </p>
             </div>
         </div>

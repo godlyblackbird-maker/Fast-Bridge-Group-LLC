@@ -6368,11 +6368,7 @@
                 }
 
                 const targetUrl = `deals.html?${params.toString()}`;
-                const openedWindow = window.open(targetUrl, '_blank', 'noopener');
-                if (!openedWindow) {
-                    window.location.href = targetUrl;
-                }
-                campaignReplyStatus.textContent = 'Opened Import Property with this conversation prefilled.';
+                window.location.href = targetUrl;
             }
 
             function renderTwilioReplyConversations() {

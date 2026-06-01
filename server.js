@@ -7830,6 +7830,7 @@ function initializeDatabase() {
       numbers_window TEXT NOT NULL DEFAULT 'all',
       closed_deal_draft_json TEXT NOT NULL DEFAULT 'null',
       whiteboard_items_json TEXT NOT NULL DEFAULT '[]',
+      year_boxes_json TEXT NOT NULL DEFAULT '[]',
       metrics_json TEXT NOT NULL DEFAULT '{}',
       updated_at INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY(owner_user_id) REFERENCES users(id)
@@ -7844,6 +7845,26 @@ function initializeDatabase() {
           console.error('Error ensuring user_analytics_state.whiteboard_items_json column:', alterErr);
         }
       });
+      db.run('ALTER TABLE user_analytics_state ADD COLUMN year_boxes_json TEXT NOT NULL DEFAULT \'[]\'', (alterErr) => {
+        if (alterErr && !/duplicate column name/i.test(String(alterErr.message || ''))) {
+          console.error('Error ensuring user_analytics_state.year_boxes_json column:', alterErr);
+        }
+      });
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS user_deals_state (
+      owner_user_id INTEGER PRIMARY KEY,
+      clicked_properties_json TEXT NOT NULL DEFAULT '[]',
+      updated_at INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating user_deals_state table:', err);
+    } else {
+      console.log('User deals state table ready');
     }
   });
 
@@ -13133,6 +13154,21 @@ function normalizeUserAnalyticsState(value) {
     ? state.closedDealDraft
     : null;
   const normalizedWindow = String(state.numbersWindow || 'all').trim().toLowerCase();
+  const yearBoxes = Array.isArray(state.yearBoxes)
+    ? state.yearBoxes
+        .map((item) => {
+          const safeItem = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+          const year = String(safeItem.year || '').replace(/[^0-9]/g, '').slice(0, 4);
+          const amount = String(safeItem.amount || '').replace(/[^0-9]/g, '').slice(0, 18);
+          if (!year) {
+            return null;
+          }
+
+          return { year, amount };
+        })
+        .filter(Boolean)
+        .slice(0, 8)
+    : [];
 
   return {
     numbersGoal: String(state.numbersGoal || '').replace(/[^0-9]/g, '').slice(0, 12),
@@ -13149,9 +13185,206 @@ function normalizeUserAnalyticsState(value) {
         }
       : null,
     whiteboardItems: normalizeUserAnalyticsWhiteboardItems(state.whiteboardItems),
+    yearBoxes,
     metrics: normalizeUserAnalyticsMetrics(state.metrics),
     updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
   };
+}
+
+function normalizeDealsStateJson(rawValue, fallbackValue) {
+  if (typeof rawValue !== 'string') {
+    return fallbackValue;
+  }
+
+  try {
+    return JSON.parse(rawValue);
+  } catch (_error) {
+    return fallbackValue;
+  }
+}
+
+function trimDealsStateText(value, maxLength = 4000) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+}
+
+function normalizeDealsStateSnapshot(value) {
+  const snapshot = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const normalized = {};
+  const stringFields = [
+    'address',
+    'importedByName',
+    'propertyDetails',
+    'listPrice',
+    'moderatePain',
+    'taxDelinquency',
+    'highDebt',
+    'marketInfo',
+    'askingVsArv',
+    'arv',
+    'compData',
+    'piq',
+    'comps',
+    'ia',
+    'offer',
+    'recordCreated',
+    'listingDate',
+    'idx',
+    'propertyType',
+    'mlsNumber',
+    'statusLabel',
+    'autoTracker',
+    'areaLabel',
+    'propertyCover',
+    'publicComments',
+    'agentComments',
+    'apn',
+    'unitNumber',
+    'totalFloors',
+    'sewer',
+    'propertyCondition',
+    'zoning',
+    'associationDues',
+    'commonWalls',
+    'garageCount',
+    'lotSize',
+    'yearBuilt',
+    'lockboxType',
+    'occupied',
+    'showing'
+  ];
+
+  stringFields.forEach((fieldName) => {
+    if (Object.prototype.hasOwnProperty.call(snapshot, fieldName)) {
+      normalized[fieldName] = trimDealsStateText(snapshot[fieldName]);
+    }
+  });
+
+  normalized.propensity = Math.max(Number(snapshot.propensity) || 0, 0);
+  normalized.dom = Math.max(Number(snapshot.dom) || 0, 0);
+  normalized.cdom = Math.max(Number(snapshot.cdom) || 0, 0);
+  normalized.propertyImages = Array.isArray(snapshot.propertyImages)
+    ? snapshot.propertyImages.map((item) => trimDealsStateText(item, 2000)).filter(Boolean).slice(0, 12)
+    : [];
+
+  const importedBy = snapshot.importedBy && typeof snapshot.importedBy === 'object' && !Array.isArray(snapshot.importedBy)
+    ? snapshot.importedBy
+    : null;
+  if (importedBy) {
+    normalized.importedBy = {
+      name: trimDealsStateText(importedBy.name, 200),
+      email: trimDealsStateText(importedBy.email, 320).toLowerCase(),
+      key: trimDealsStateText(importedBy.key, 200),
+      role: trimDealsStateText(importedBy.role, 120).toLowerCase()
+    };
+  }
+
+  const agentRecord = snapshot.agentRecord && typeof snapshot.agentRecord === 'object' && !Array.isArray(snapshot.agentRecord)
+    ? snapshot.agentRecord
+    : null;
+  if (agentRecord) {
+    normalized.agentRecord = {
+      name: trimDealsStateText(agentRecord.name, 200),
+      title: trimDealsStateText(agentRecord.title, 200),
+      phone: trimDealsStateText(agentRecord.phone, 80),
+      email: trimDealsStateText(agentRecord.email, 320).toLowerCase(),
+      brokerage: trimDealsStateText(agentRecord.brokerage, 240),
+      avgResponse: trimDealsStateText(agentRecord.avgResponse, 200),
+      averageDealsPerYear: trimDealsStateText(agentRecord.averageDealsPerYear, 80),
+      specialties: trimDealsStateText(agentRecord.specialties, 1000)
+    };
+  }
+
+  return normalized;
+}
+
+function normalizeUserDealsClickedProperties(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      const safeItem = item && typeof item === 'object' && !Array.isArray(item) ? item : null;
+      if (!safeItem) {
+        return null;
+      }
+
+      const id = trimDealsStateText(safeItem.id, 240);
+      const address = trimDealsStateText(safeItem.address || safeItem.propertyAddress, 400);
+      if (!id || !address) {
+        return null;
+      }
+
+      return {
+        id,
+        address,
+        location: trimDealsStateText(safeItem.location, 320),
+        price: trimDealsStateText(safeItem.price, 120),
+        beds: trimDealsStateText(safeItem.beds, 120),
+        baths: trimDealsStateText(safeItem.baths, 120),
+        area: trimDealsStateText(safeItem.area, 120),
+        garage: trimDealsStateText(safeItem.garage, 120),
+        lotSize: trimDealsStateText(safeItem.lotSize, 160),
+        status: trimDealsStateText(safeItem.status, 80).toLowerCase(),
+        roi: trimDealsStateText(safeItem.roi, 80),
+        imageUrl: trimDealsStateText(safeItem.imageUrl, 2000),
+        clickedAt: Math.max(Number(safeItem.clickedAt) || 0, 0),
+        propertySnapshot: normalizeDealsStateSnapshot(safeItem.propertySnapshot)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 250);
+}
+
+function normalizeUserDealsState(value) {
+  const state = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    clickedProperties: normalizeUserDealsClickedProperties(state.clickedProperties),
+    updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
+  };
+}
+
+function serializeUserDealsStateRow(row) {
+  if (!row) {
+    return normalizeUserDealsState(null);
+  }
+
+  return normalizeUserDealsState({
+    clickedProperties: normalizeDealsStateJson(row.clicked_properties_json, []),
+    updatedAt: Number(row.updated_at) || 0
+  });
+}
+
+async function getUserDealsState(ownerUserId) {
+  const row = await dbGet(
+    `SELECT clicked_properties_json, updated_at
+       FROM user_deals_state
+      WHERE owner_user_id = ?`,
+    [ownerUserId]
+  );
+
+  return serializeUserDealsStateRow(row);
+}
+
+async function saveUserDealsState(ownerUserId, nextState) {
+  const normalizedState = normalizeUserDealsState(nextState);
+  const updatedAt = normalizedState.updatedAt || Date.now();
+
+  await dbRun(
+    `INSERT INTO user_deals_state (
+      owner_user_id, clicked_properties_json, updated_at
+    ) VALUES (?, ?, ?)
+    ON CONFLICT(owner_user_id) DO UPDATE SET
+      clicked_properties_json = excluded.clicked_properties_json,
+      updated_at = excluded.updated_at`,
+    [
+      ownerUserId,
+      JSON.stringify(normalizedState.clickedProperties),
+      updatedAt
+    ]
+  );
+
+  return getUserDealsState(ownerUserId);
 }
 
 function serializeUserAnalyticsStateRow(row) {
@@ -13164,6 +13397,7 @@ function serializeUserAnalyticsStateRow(row) {
     numbersWindow: row.numbers_window,
     closedDealDraft: parseAnalyticsStateJson(row.closed_deal_draft_json, null),
     whiteboardItems: parseAnalyticsStateJson(row.whiteboard_items_json, []),
+    yearBoxes: parseAnalyticsStateJson(row.year_boxes_json, []),
     metrics: parseAnalyticsStateJson(row.metrics_json, {}),
     updatedAt: Number(row.updated_at) || 0
   });
@@ -13171,7 +13405,7 @@ function serializeUserAnalyticsStateRow(row) {
 
 async function getUserAnalyticsState(ownerUserId) {
   const row = await dbGet(
-    `SELECT numbers_goal, numbers_window, closed_deal_draft_json, whiteboard_items_json, metrics_json, updated_at
+    `SELECT numbers_goal, numbers_window, closed_deal_draft_json, whiteboard_items_json, year_boxes_json, metrics_json, updated_at
        FROM user_analytics_state
       WHERE owner_user_id = ?`,
     [ownerUserId]
@@ -13186,13 +13420,14 @@ async function saveUserAnalyticsState(ownerUserId, nextState) {
 
   await dbRun(
     `INSERT INTO user_analytics_state (
-      owner_user_id, numbers_goal, numbers_window, closed_deal_draft_json, whiteboard_items_json, metrics_json, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      owner_user_id, numbers_goal, numbers_window, closed_deal_draft_json, whiteboard_items_json, year_boxes_json, metrics_json, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(owner_user_id) DO UPDATE SET
       numbers_goal = excluded.numbers_goal,
       numbers_window = excluded.numbers_window,
       closed_deal_draft_json = excluded.closed_deal_draft_json,
       whiteboard_items_json = excluded.whiteboard_items_json,
+      year_boxes_json = excluded.year_boxes_json,
       metrics_json = excluded.metrics_json,
       updated_at = excluded.updated_at`,
     [
@@ -13201,6 +13436,7 @@ async function saveUserAnalyticsState(ownerUserId, nextState) {
       normalizedState.numbersWindow,
       JSON.stringify(normalizedState.closedDealDraft),
       JSON.stringify(normalizedState.whiteboardItems),
+      JSON.stringify(normalizedState.yearBoxes),
       JSON.stringify(normalizedState.metrics),
       updatedAt
     ]
@@ -18094,6 +18330,50 @@ function requireAdmin(req, res) {
   return decoded;
 }
 
+function getFeatureAccessRoleKey(userLike) {
+  const normalizedUser = normalizeAuthPayload(userLike);
+  const normalizedRole = String(normalizedUser?.role || '').trim().toLowerCase();
+  if (normalizedRole === 'admin') {
+    return 'admin';
+  }
+  if (normalizedRole === PREMIUM_USER_ROLE) {
+    return PREMIUM_USER_ROLE;
+  }
+  if (normalizedRole === 'broker') {
+    return 'broker';
+  }
+  if (normalizedRole === TEST_USER_ROLE) {
+    return TEST_USER_ROLE;
+  }
+  return 'user';
+}
+
+async function requireFeatureAccess(req, res, featureKey, deniedMessage) {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return null;
+  }
+
+  const roleKey = getFeatureAccessRoleKey(decoded);
+  if (roleKey === 'admin') {
+    return decoded;
+  }
+
+  try {
+    const featureAccess = await getFeatureAccessSettings();
+    const feature = featureAccess?.features?.[featureKey];
+    if (feature && feature.roles && feature.roles[roleKey]) {
+      return decoded;
+    }
+  } catch (error) {
+    console.error(`Feature access check failed for ${featureKey}:`, error);
+    return res.status(500).json({ error: 'Unable to verify feature access right now.' });
+  }
+
+  res.status(403).json({ error: deniedMessage || 'You do not have access to this feature.' });
+  return null;
+}
+
 function requireBrokerOrAdmin(req, res) {
   const decoded = requireAuth(req, res);
   if (!decoded) {
@@ -21864,8 +22144,8 @@ async function extractMlsImportPdfFields(pdfSource) {
   };
 }
 
-app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
-  const decoded = requireAdmin(req, res);
+app.post('/api/admin/mls-imports/extract-pdf-job', async (req, res) => {
+  const decoded = await requireFeatureAccess(req, res, 'mlsSpreadsheet', 'MLS spreadsheet access is required to parse PDF imports.');
   if (!decoded) {
     return;
   }
@@ -22040,7 +22320,7 @@ app.post('/api/admin/mls-imports/extract-pdf-job', (req, res) => {
 });
 
 app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => {
-  const decoded = requireAdmin(req, res);
+  const decoded = await requireFeatureAccess(req, res, 'mlsSpreadsheet', 'MLS spreadsheet access is required to view PDF import jobs.');
   if (!decoded) {
     return;
   }
@@ -22063,7 +22343,7 @@ app.get('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => {
 });
 
 app.delete('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => {
-  const decoded = requireAdmin(req, res);
+  const decoded = await requireFeatureAccess(req, res, 'mlsSpreadsheet', 'MLS spreadsheet access is required to manage PDF import jobs.');
   if (!decoded) {
     return;
   }
@@ -22090,7 +22370,7 @@ app.delete('/api/admin/mls-imports/extract-pdf-job/:jobId', async (req, res) => 
 });
 
 app.get('/api/admin/mls-imports/extract-pdf-jobs', async (req, res) => {
-  const decoded = requireAdmin(req, res);
+  const decoded = await requireFeatureAccess(req, res, 'mlsSpreadsheet', 'MLS spreadsheet access is required to view PDF import jobs.');
   if (!decoded) {
     return;
   }
@@ -22339,7 +22619,7 @@ app.delete('/api/mls-imports/rows', async (req, res) => {
 });
 
 app.post('/api/admin/mls-imports/extract-pdf', express.json({ limit: MLS_IMPORT_PDF_BODY_LIMIT }), async (req, res) => {
-  const decoded = requireAdmin(req, res);
+  const decoded = await requireFeatureAccess(req, res, 'mlsSpreadsheet', 'MLS spreadsheet access is required to parse PDF imports.');
   if (!decoded) {
     return;
   }
@@ -24941,6 +25221,35 @@ app.put('/api/analytics/state', express.json({ limit: '2mb' }), async (req, res)
   } catch (error) {
     console.error('Failed to save analytics state:', error);
     return res.status(500).json({ error: 'Failed to save analytics state.' });
+  }
+});
+
+app.get('/api/my-deals/state', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    return res.json({ state: await getUserDealsState(Number(decoded.id) || 0) });
+  } catch (error) {
+    console.error('Failed to load My Deals state:', error);
+    return res.status(500).json({ error: 'Failed to load My Deals state.' });
+  }
+});
+
+app.put('/api/my-deals/state', express.json({ limit: '3mb' }), async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  try {
+    const savedState = await saveUserDealsState(Number(decoded.id) || 0, req.body?.state);
+    return res.json({ state: savedState });
+  } catch (error) {
+    console.error('Failed to save My Deals state:', error);
+    return res.status(500).json({ error: 'Failed to save My Deals state.' });
   }
 });
 

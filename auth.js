@@ -69,9 +69,9 @@
       roles: Object.freeze({
         admin: true,
         user: false,
-        'premium user': false,
-        broker: false,
-        [TEST_USER_ROLE]: false
+        'premium user': true,
+        broker: true,
+        [TEST_USER_ROLE]: true
       })
     }),
     mlsSpreadsheet: Object.freeze({
@@ -859,25 +859,21 @@
       return true;
     }
 
-    if (featureKey === 'campaigns') {
-      return false;
-    }
-
     const features = getFeatureAccessConfig();
     const feature = features[featureKey];
     return !!(feature && feature.roles && feature.roles[roleKey]);
   }
 
   function getFeatureNavAccessMode(featureKey, userLike) {
-    if (featureKey === 'campaigns') {
-      return getFeatureAccessRoleKey(userLike) === 'user' ? 'locked' : (isAdminUser(userLike) ? 'show' : 'hidden');
+    const roleKey = getFeatureAccessRoleKey(userLike);
+    if (roleKey === 'premium user' && featureKey === 'campaigns') {
+      return 'locked';
     }
 
     if (isFeatureEnabledForUser(featureKey, userLike)) {
       return 'show';
     }
 
-    const roleKey = getFeatureAccessRoleKey(userLike);
     if (roleKey === 'user' && ['analytics', 'campaigns', 'mlsSpreadsheet'].includes(featureKey)) {
       return 'locked';
     }
@@ -1948,6 +1944,13 @@
     }
 
     clearPremiumUpgradeTooltipHideTimer();
+    const tooltip = ensurePremiumUpgradeTooltip();
+    const customMessage = String(target.dataset.premiumUpgradeTooltipMessage || '').trim();
+    if (customMessage) {
+      tooltip.innerHTML = '<span class="premium-upgrade-tooltip-label">Locked feature - ' + customMessage.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span>';
+    } else {
+      tooltip.innerHTML = '<span class="premium-upgrade-tooltip-label">Locked feature</span><a class="premium-upgrade-tooltip-link" href="' + PREMIUM_SETTINGS_URL + '">upgrade to premium</a>';
+    }
     positionPremiumUpgradeTooltip(target);
   }
 
@@ -1974,8 +1977,20 @@
     runHide();
   }
 
-  function attachPremiumUpgradeTooltip(target) {
-    if (!target || target.dataset.premiumUpgradeTooltipBound === 'true') {
+  function attachPremiumUpgradeTooltip(target, options) {
+    if (!target) {
+      return;
+    }
+
+    const config = options && typeof options === 'object' ? options : {};
+
+    if (config.message) {
+      target.dataset.premiumUpgradeTooltipMessage = String(config.message).trim();
+    } else {
+      delete target.dataset.premiumUpgradeTooltipMessage;
+    }
+
+    if (target.dataset.premiumUpgradeTooltipBound === 'true') {
       return;
     }
 
@@ -2054,8 +2069,8 @@
     link.classList.remove('active');
     link.classList.add('nav-link-locked');
     link.setAttribute('aria-disabled', 'true');
-    link.setAttribute('title', 'upgrade to premium');
-    attachPremiumUpgradeTooltip(link);
+    link.setAttribute('title', 'Locked feature - Ask admin for Twilio Number');
+    attachPremiumUpgradeTooltip(link, { message: 'Ask admin for Twilio Number' });
 
     if (!link.querySelector('.nav-lock-badge')) {
       const badge = document.createElement('span');
@@ -2751,6 +2766,10 @@
         return;
       }
       if (applyTestUserRestrictedWorkspaceAccess(activeUser) === false) {
+        return;
+      }
+      if (getFeatureAccessRoleKey(activeUser) === 'premium user' && isCampaignsPath(window.location.pathname)) {
+        window.location.href = '/dashboard.html';
         return;
       }
       if (!isTestUser(activeUser)) {

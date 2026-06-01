@@ -259,6 +259,92 @@
             flex-wrap: wrap;
         }
 
+        .buyers-sheet-scroll-rail {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 10px 14px;
+            margin: 0 0 12px;
+            border: 1px solid color-mix(in srgb, var(--buyers-border) 72%, rgb(var(--accent-light-rgb) / 0.18) 28%);
+            border-radius: 999px;
+            background:
+                radial-gradient(circle at left center, rgb(var(--accent-light-rgb) / 0.16), transparent 34%),
+                linear-gradient(135deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03));
+            box-shadow:
+                inset 0 1px 0 rgb(255 255 255 / 0.08),
+                0 18px 32px -26px rgb(0 0 0 / 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .buyers-sheet-scroll-rail.is-bottom {
+            margin: 12px 0 0;
+        }
+
+        .buyers-sheet-scroll-rail-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgb(255 255 255 / 0.07);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .buyers-sheet-scroll-rail-label svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.88;
+        }
+
+        .buyers-sheet-scroll-rail-track {
+            position: relative;
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: auto;
+            scrollbar-color: var(--buyers-scroll-thumb) transparent;
+            cursor: ew-resize;
+        }
+
+        .buyers-sheet-scroll-rail-track::-webkit-scrollbar {
+            height: 12px;
+        }
+
+        .buyers-sheet-scroll-rail-track::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.72), rgb(var(--accent-light-rgb) / 0.88));
+            border-radius: 999px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .buyers-sheet-scroll-rail-track::-webkit-scrollbar-track {
+            background: linear-gradient(90deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
+            border-radius: 999px;
+        }
+
+        .buyers-sheet-scroll-rail-track::before {
+            content: '';
+            position: absolute;
+            inset: 50% 0 auto;
+            height: 1px;
+            transform: translateY(-50%);
+            background: linear-gradient(90deg, transparent, rgb(var(--accent-light-rgb) / 0.34), transparent);
+            pointer-events: none;
+        }
+
+        .buyers-sheet-scroll-rail-spacer {
+            height: 1px;
+        }
+
         .buyers-sheet-table-wrap {
             width: 100%;
             max-width: 100%;
@@ -267,8 +353,7 @@
             overflow-y: hidden;
             box-sizing: border-box;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: auto;
-            scrollbar-color: var(--buyers-scroll-thumb) var(--buyers-scroll-track);
+            scrollbar-width: none;
             border: 1px solid var(--buyers-border);
             border-radius: 16px;
             background: var(--buyers-wrap-bg);
@@ -304,7 +389,7 @@
         }
 
         .buyers-sheet-table-wrap::-webkit-scrollbar {
-            height: 14px;
+            height: 0;
         }
 
         .buyers-sheet-table-wrap::-webkit-scrollbar-thumb {
@@ -1186,12 +1271,27 @@
         }
 
         @media (max-width: 900px) {
+            .buyers-sheet-scroll-rail {
+                padding: 10px 12px;
+            }
+
             .buyers-sheet-table {
                 min-width: 1320px;
             }
         }
 
         @media (max-width: 700px) {
+            .buyers-sheet-scroll-rail {
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .buyers-sheet-scroll-rail-label {
+                padding: 7px 10px;
+                font-size: 10px;
+                letter-spacing: 0.1em;
+            }
+
             .buyers-sheet-table {
                 min-width: 1240px;
                 font-size: 13px;
@@ -1376,7 +1476,7 @@
                     <div class="buyers-sheet-header">
                         <div>
                             <h2 class="card-title">MLS Spreadsheet | FAST BRIDGE GROUP LLC</h2>
-                            <p class="card-subtitle">Upload an MLS PDF and extract the property address, LA name, LO phone, offers email, LA direct, LA email, and LA cell into this admin-only sheet.</p>
+                            <p class="card-subtitle">Upload an MLS PDF and extract the property address, LA name, LO phone, offers email, LA direct, LA email, and LA cell into this MLS import sheet.</p>
                         </div>
                         <div class="buyers-sheet-actions">
                             <span id="mls-imports-count" class="buyers-sheet-count">0 Rows</span>
@@ -1421,7 +1521,16 @@
                         <p id="mls-imports-recent-imports-empty" class="buyers-sheet-recent-import-empty">No PDFs have been extracted yet.</p>
                     </section>
 
-                    <div class="buyers-sheet-table-wrap">
+                    <div class="buyers-sheet-scroll-rail is-top" aria-label="Top horizontal scroll for MLS spreadsheet">
+                        <span class="buyers-sheet-scroll-rail-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"></path><path d="M9 7l-5 5 5 5"></path><path d="M15 7l5 5-5 5"></path></svg>
+                            Slide Columns
+                        </span>
+                        <div id="mls-imports-top-scroll-track" class="buyers-sheet-scroll-rail-track" role="scrollbar" aria-controls="mls-imports-sheet-table" aria-label="Top horizontal spreadsheet scroll">
+                            <div id="mls-imports-top-scroll-spacer" class="buyers-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                        </div>
+                    </div>
+                    <div id="mls-imports-table-wrap" class="buyers-sheet-table-wrap">
                         <table class="buyers-sheet-table" id="mls-imports-sheet-table">
                             <thead>
                                 <tr>
@@ -1440,6 +1549,15 @@
                             </thead>
                             <tbody id="mls-imports-sheet-body"></tbody>
                         </table>
+                    </div>
+                    <div class="buyers-sheet-scroll-rail is-bottom" aria-label="Bottom horizontal scroll for MLS spreadsheet">
+                        <span class="buyers-sheet-scroll-rail-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"></path><path d="M9 7l-5 5 5 5"></path><path d="M15 7l5 5-5 5"></path></svg>
+                            Scroll Rail
+                        </span>
+                        <div id="mls-imports-bottom-scroll-track" class="buyers-sheet-scroll-rail-track" role="scrollbar" aria-controls="mls-imports-sheet-table" aria-label="Bottom horizontal spreadsheet scroll">
+                            <div id="mls-imports-bottom-scroll-spacer" class="buyers-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                        </div>
                     </div>
                     <div class="buyers-sheet-pagination">
                         <span id="mls-imports-page-meta" class="buyers-sheet-pagination-meta">Loading rows...</span>
@@ -1505,7 +1623,7 @@
                             <h3 id="mls-imports-template-title" class="buyers-sheet-template-title">Copy Templates</h3>
                             <p class="buyers-sheet-template-subtitle">Pick a status and edit the full message, including the opening line and any optional greeting placeholders.</p>
                         </div>
-                        <button type="button" class="buyers-sheet-template-close" data-template-close="true" aria-label="Close template manager">Ã—</button>
+                        <button type="button" class="buyers-sheet-template-close" data-template-close="true" aria-label="Close template manager">&times;</button>
                     </div>
                     <div class="buyers-sheet-template-controls">
                         <label class="buyers-sheet-template-field">
@@ -1800,6 +1918,12 @@
             }
 
             const tableBody = document.getElementById('mls-imports-sheet-body');
+            const tableWrap = document.getElementById('mls-imports-table-wrap');
+            const tableElement = document.getElementById('mls-imports-sheet-table');
+            const topScrollTrack = document.getElementById('mls-imports-top-scroll-track');
+            const topScrollSpacer = document.getElementById('mls-imports-top-scroll-spacer');
+            const bottomScrollTrack = document.getElementById('mls-imports-bottom-scroll-track');
+            const bottomScrollSpacer = document.getElementById('mls-imports-bottom-scroll-spacer');
             const countBadge = document.getElementById('mls-imports-count');
             const addRowButton = document.getElementById('mls-imports-add-row');
             const addPdfButton = document.getElementById('mls-imports-add-pdf');
@@ -1840,7 +1964,7 @@
             const templateResetButton = document.getElementById('mls-imports-template-reset');
             const templateCloseButtons = templateModal ? Array.from(templateModal.querySelectorAll('[data-template-close="true"]')) : [];
 
-            if (!tableBody || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendAllTwilioButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton || !prevPageButton || !nextPageButton || !pageIndicator || !pageMeta) {
+            if (!tableBody || !tableWrap || !tableElement || !topScrollTrack || !topScrollSpacer || !bottomScrollTrack || !bottomScrollSpacer || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendAllTwilioButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton || !prevPageButton || !nextPageButton || !pageIndicator || !pageMeta) {
                 return;
             }
 
@@ -1854,6 +1978,142 @@
             let activePdfJobId = '';
             let activePdfImportCancelled = false;
             let isSendingAllTwilioRows = false;
+            let canSendAllRowsThroughTwilio = true;
+            let sendAllTwilioLockMessage = '';
+
+            const SEND_ALL_TWILIO_DEFAULT_MARKUP = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg><span>Send All Twilio</span>';
+            const SEND_ALL_TWILIO_LOCKED_MARKUP = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span>Send All Twilio</span>';
+            const QUICK_SEND_DEFAULT_MARKUP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg>';
+            const QUICK_SEND_LOCKED_MARKUP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+
+            function initSpreadsheetScrollRails() {
+                let syncingSource = '';
+
+                const syncRailMetrics = () => {
+                    const scrollWidth = Math.max(tableElement.scrollWidth, tableWrap.scrollWidth, tableWrap.clientWidth);
+                    const spacerWidth = `${scrollWidth}px`;
+                    topScrollSpacer.style.width = spacerWidth;
+                    bottomScrollSpacer.style.width = spacerWidth;
+
+                    const maxScrollLeft = Math.max(tableWrap.scrollWidth - tableWrap.clientWidth, 0);
+                    const currentScrollLeft = Math.min(tableWrap.scrollLeft, maxScrollLeft);
+                    topScrollTrack.scrollLeft = currentScrollLeft;
+                    bottomScrollTrack.scrollLeft = currentScrollLeft;
+
+                    const hasOverflow = maxScrollLeft > 0;
+                    if (topScrollTrack.parentElement) {
+                        topScrollTrack.parentElement.hidden = !hasOverflow;
+                    }
+                    if (bottomScrollTrack.parentElement) {
+                        bottomScrollTrack.parentElement.hidden = !hasOverflow;
+                    }
+                };
+
+                const syncFrom = (source) => {
+                    if (syncingSource === source) {
+                        return;
+                    }
+
+                    syncingSource = source;
+
+                    if (source === 'table') {
+                        topScrollTrack.scrollLeft = tableWrap.scrollLeft;
+                        bottomScrollTrack.scrollLeft = tableWrap.scrollLeft;
+                    } else if (source === 'top') {
+                        tableWrap.scrollLeft = topScrollTrack.scrollLeft;
+                        bottomScrollTrack.scrollLeft = topScrollTrack.scrollLeft;
+                    } else if (source === 'bottom') {
+                        tableWrap.scrollLeft = bottomScrollTrack.scrollLeft;
+                        topScrollTrack.scrollLeft = bottomScrollTrack.scrollLeft;
+                    }
+
+                    if (typeof window.requestAnimationFrame === 'function') {
+                        window.requestAnimationFrame(() => {
+                            syncingSource = '';
+                        });
+                    } else {
+                        syncingSource = '';
+                    }
+                };
+
+                tableWrap.addEventListener('scroll', () => syncFrom('table'), { passive: true });
+                topScrollTrack.addEventListener('scroll', () => syncFrom('top'), { passive: true });
+                bottomScrollTrack.addEventListener('scroll', () => syncFrom('bottom'), { passive: true });
+                window.addEventListener('resize', syncRailMetrics);
+
+                if (typeof ResizeObserver === 'function') {
+                    const railObserver = new ResizeObserver(() => syncRailMetrics());
+                    railObserver.observe(tableWrap);
+                    railObserver.observe(tableElement);
+                }
+
+                if (typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(syncRailMetrics);
+                } else {
+                    syncRailMetrics();
+                }
+            }
+
+            initSpreadsheetScrollRails();
+
+            function syncSendAllTwilioButtonState() {
+                if (!sendAllTwilioButton) {
+                    return;
+                }
+
+                const isLocked = !canSendAllRowsThroughTwilio;
+                sendAllTwilioButton.disabled = isSendingAllTwilioRows || isLocked;
+                sendAllTwilioButton.dataset.locked = isLocked ? 'true' : 'false';
+                sendAllTwilioButton.setAttribute('aria-disabled', sendAllTwilioButton.disabled ? 'true' : 'false');
+
+                if (isSendingAllTwilioRows) {
+                    sendAllTwilioButton.innerHTML = '<span>Sending...</span>';
+                    sendAllTwilioButton.title = 'Sending each visible MLS row through Twilio one by one';
+                    return;
+                }
+
+                sendAllTwilioButton.innerHTML = isLocked ? SEND_ALL_TWILIO_LOCKED_MARKUP : SEND_ALL_TWILIO_DEFAULT_MARKUP;
+                sendAllTwilioButton.title = isLocked
+                    ? (sendAllTwilioLockMessage || 'Twilio messaging is only available to admins or users with an assigned number.')
+                    : 'Send each visible MLS row through Twilio one by one';
+            }
+
+            async function refreshSendAllTwilioAccess() {
+                const authToken = getAuthToken();
+                if (!authToken) {
+                    canSendAllRowsThroughTwilio = false;
+                    sendAllTwilioLockMessage = 'Sign in again before sending MLS outreach through Twilio.';
+                    syncSendAllTwilioButtonState();
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/twilio/status', {
+                        headers: {
+                            Authorization: `Bearer ${authToken}`
+                        }
+                    });
+
+                    const payload = await response.json().catch(() => ({}));
+                    const access = payload && payload.access && typeof payload.access === 'object' ? payload.access : null;
+                    if (!response.ok) {
+                        throw new Error(payload && payload.error ? payload.error : 'Unable to load Twilio access state.');
+                    }
+
+                    if (access && access.allowed === false) {
+                        canSendAllRowsThroughTwilio = false;
+                        sendAllTwilioLockMessage = String(access.error || '').trim() || 'Twilio messaging is only available to admins or users with an assigned number.';
+                    } else {
+                        canSendAllRowsThroughTwilio = true;
+                        sendAllTwilioLockMessage = '';
+                    }
+                } catch (error) {
+                    canSendAllRowsThroughTwilio = true;
+                    sendAllTwilioLockMessage = '';
+                }
+
+                syncSendAllTwilioButtonState();
+            }
 
             function wait(ms) {
                 return new Promise((resolve) => {
@@ -2947,18 +3207,28 @@
                 const sentRecord = rowSignature ? sentRowRecords[rowSignature] : null;
                 const phoneOptions = getSmsPhoneOptions(rowData);
                 const selectedOption = phoneOptions[0] || null;
+                const isLocked = !canSendAllRowsThroughTwilio;
 
                 button.classList.toggle('is-sent', Boolean(sentRecord));
+                button.disabled = isLocked;
+                button.dataset.locked = isLocked ? 'true' : 'false';
+                button.innerHTML = isLocked ? QUICK_SEND_LOCKED_MARKUP : QUICK_SEND_DEFAULT_MARKUP;
                 if (sentRecord) {
-                    button.title = `Send through Twilio again${sentRecord.phone ? ` to ${sentRecord.phone}` : ''}`;
+                    button.setAttribute('aria-label', isLocked ? 'Twilio quick send is locked for this account.' : 'Send MLS outreach template through Twilio again');
+                    button.title = isLocked
+                        ? (sendAllTwilioLockMessage || 'Twilio messaging is only available to admins or users with an assigned number.')
+                        : `Send through Twilio again${sentRecord.phone ? ` to ${sentRecord.phone}` : ''}`;
                     meta.textContent = `Sent ${sentRecord.label || 'via Twilio'} ${formatSentTimestamp(sentRecord.sentAt)}`;
                     meta.classList.add('is-sent');
                     return;
                 }
 
-                button.title = selectedOption
-                    ? `Send through Twilio to ${selectedOption.label}: ${selectedOption.phone}`
-                    : 'Send through Twilio';
+                button.setAttribute('aria-label', isLocked ? 'Twilio quick send is locked for this account.' : 'Send MLS outreach template through Twilio');
+                button.title = isLocked
+                    ? (sendAllTwilioLockMessage || 'Twilio messaging is only available to admins or users with an assigned number.')
+                    : (selectedOption
+                        ? `Send through Twilio to ${selectedOption.label}: ${selectedOption.phone}`
+                        : 'Send through Twilio');
                 meta.textContent = selectedOption
                     ? `Using ${selectedOption.label}`
                     : 'No phone ready';
@@ -2979,6 +3249,10 @@
             }
 
             async function sendMlsTemplateToAgent(rowData, button) {
+                if (!canSendAllRowsThroughTwilio) {
+                    throw new Error(sendAllTwilioLockMessage || 'Twilio messaging is only available to admins or users with an assigned number.');
+                }
+
                 const authToken = getAuthToken();
                 if (!authToken) {
                     throw new Error('Sign in again before sending MLS outreach through Twilio.');
@@ -3050,7 +3324,12 @@
                     };
                 } finally {
                     if (button) {
-                        button.disabled = false;
+                        const rowElement = button.closest('tr');
+                        if (rowElement) {
+                            syncSendButtonState(rowElement);
+                        } else {
+                            button.disabled = false;
+                        }
                     }
                 }
             }
@@ -3425,8 +3704,13 @@
                 sendButton.className = 'buyers-sheet-send-btn';
                 sendButton.setAttribute('aria-label', 'Send MLS outreach template through Twilio');
                 sendButton.title = 'Send through Twilio';
-                sendButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"></path><path d="M22 2 15 22 11 13 2 9 22 2z"></path></svg>';
+                sendButton.innerHTML = QUICK_SEND_DEFAULT_MARKUP;
                 sendButton.addEventListener('click', async () => {
+                    if (!canSendAllRowsThroughTwilio) {
+                        showToast('error', 'Twilio Locked', sendAllTwilioLockMessage || 'Twilio messaging is only available to admins or users with an assigned number.');
+                        return;
+                    }
+
                     const row = sendButton.closest('tr');
                     const rowData = getRowDataFromElement(row);
 
@@ -3506,6 +3790,11 @@
                     return;
                 }
 
+                if (!canSendAllRowsThroughTwilio) {
+                    showToast('error', 'Twilio Locked', sendAllTwilioLockMessage || 'Twilio messaging is only available to admins or users with an assigned number.');
+                    return;
+                }
+
                 const allRows = (await fetchAllSpreadsheetRows()).filter(isMeaningfulRow);
 
                 if (!allRows.length) {
@@ -3514,9 +3803,7 @@
                 }
 
                 isSendingAllTwilioRows = true;
-                sendAllTwilioButton.disabled = true;
-                const originalLabel = sendAllTwilioButton.innerHTML;
-                sendAllTwilioButton.innerHTML = '<span>Sending...</span>';
+                syncSendAllTwilioButtonState();
 
                 let sentCount = 0;
                 let failedCount = 0;
@@ -3552,8 +3839,7 @@
                     }
                 } finally {
                     isSendingAllTwilioRows = false;
-                    sendAllTwilioButton.disabled = false;
-                    sendAllTwilioButton.innerHTML = originalLabel;
+                    syncSendAllTwilioButtonState();
                 }
             }
 
@@ -4305,7 +4591,9 @@
 
             updatePaginationUi();
             renderRecentPdfJobs();
+            syncSendAllTwilioButtonState();
             void Promise.all([
+                refreshSendAllTwilioAccess(),
                 fetchSpreadsheetRowsPage(1),
                 fetchRecentPdfJobs()
             ]).catch((error) => {

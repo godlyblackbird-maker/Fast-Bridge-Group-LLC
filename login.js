@@ -43,6 +43,7 @@ const LOGIN_THEME_LABELS = Object.freeze({
   cyberpunk: 'Cyberpunk'
 });
 const LOGIN_THEME_LOGO_PATHS = Object.freeze({
+  space: 'png photos/Night theme logo.png',
   cyberpunk: 'png photos/CYBERPUNK LOGO.png'
 });
 let loginBlacklightFluidModulePromise = null;

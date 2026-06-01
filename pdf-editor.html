@@ -69,6 +69,7 @@
                 const themeLogoPaths = {
                     christmas: 'png photos/Christmas Theme Logo.png',
                     swamp: 'png photos/Swamp Theme Logo.png',
+                    space: 'png photos/Night theme logo.png',
                     cyberpunk: 'png photos/CYBERPUNK LOGO.png',
                     blacklight: 'png photos/FAST LOGO 777.png',
                     japan: 'png photos/Japan Theme Mode Logo.png'
@@ -206,7 +207,22 @@
         }
 
         [data-theme="blacklight"] .pdf-editor-page .nav-item {
+            display: block;
             width: 100%;
+        }
+
+        .pdf-editor-page .nav-section > ul {
+            display: block;
+        }
+
+        .pdf-editor-page .nav-item + .nav-item {
+            margin-top: 5px;
+        }
+
+        .pdf-editor-page .nav-item.nav-item-divider {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px solid var(--glass-border);
         }
 
         [data-theme="blacklight"] .pdf-editor-page .nav-link {
@@ -1192,7 +1208,7 @@
                     <span class="nav-section-title">Main Menu</span>
                     <ul>
                         <li class="nav-item">
-                            <a href="dashboard.html" class="nav-link active">
+                            <a href="dashboard.html" class="nav-link">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="3" width="7" height="7" rx="1"/>
                                     <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -1229,6 +1245,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="mls-imports-spreadsheet.html" class="nav-link">
+                                <span class="nav-icon nav-icon-mls-spreadsheet" aria-hidden="true"></span>
+                                MLS Spreadsheet
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="my-agents.html" class="nav-link">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -1254,7 +1276,7 @@
                                 Gmail
                             </a>
                         </li>
-                        <li class="nav-item">
+                        <li class="nav-item nav-item-divider">
                             <a href="campaigns.html" class="nav-link">
                                 <span class="nav-icon nav-icon-campaigns" aria-hidden="true"></span>
                                 Twilio Messaging
@@ -1310,9 +1332,36 @@
                 <li class="nav-section">
                     <span class="nav-section-title">Account</span>
                     <ul>
-                        <li class="nav-item"><a href="admin-controls.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 16v4"/></svg>Admin Controls</a></li>
-                        <li class="nav-item"><a href="active-buyers.html" class="nav-link nav-link-locked" aria-disabled="true" title="Admin only" onclick="event.preventDefault();"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18"/><path d="M3 12h18"/><path d="M3 19h18"/></svg>Active Buyers<span class="nav-lock-badge" aria-hidden="true"><svg class="nav-lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></span></a></li>
-                        <li class="nav-item"><a href="login.html" class="nav-link"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</a></li>
+                        <li class="nav-item">
+                            <a href="admin-controls.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="14" rx="2"/>
+                                    <path d="M8 20h8"/>
+                                    <path d="M12 16v4"/>
+                                </svg>
+                                Admin Controls
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="active-buyers.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 5h18"/>
+                                    <path d="M3 12h18"/>
+                                    <path d="M3 19h18"/>
+                                </svg>
+                                Active Buyers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="login.html" class="nav-link">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Logout
+                            </a>
+                        </li>
                     </ul>
                 </li>
             </ul>

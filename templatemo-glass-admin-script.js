@@ -43,6 +43,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     const THEME_LOGO_PATHS = {
         christmas: 'png photos/Christmas Theme Logo.png',
         swamp: 'png photos/Swamp Theme Logo.png',
+        space: 'png photos/Night theme logo.png',
         cyberpunk: 'png photos/CYBERPUNK LOGO.png',
         blacklight: 'png photos/FAST LOGO 777.png',
         japan: 'png photos/Japan Theme Mode Logo.png'
@@ -57,6 +58,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         'admin-announcement',
         'admin-discord-meetings',
         'unified-inbox-launch',
+        'employee-tracker-sheet',
         'word-maker-launch',
         'fbg-studio-launch',
         'online-users',
@@ -71,6 +73,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         'admin-announcement': 'Announcements',
         'admin-discord-meetings': 'Discord Meetings',
         'unified-inbox-launch': 'Unified Inbox',
+        'employee-tracker-sheet': 'Employee Tracker',
         'word-maker-launch': 'Page Processor',
         'fbg-studio-launch': 'Recording Studio',
         'online-users': 'Online Users',
@@ -2482,6 +2485,8 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             });
             setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextClickedItems, { silent: config.silent });
         }
+
+        scheduleDealsStateSave(workspaceUser, { immediate: Boolean(config.immediate) });
     }
 
     function getPersistedSelectedPropertyDetail() {
@@ -3087,15 +3092,37 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         const resolvedTheme = resolveTheme(theme || document.documentElement.getAttribute('data-theme') || getThemePreference());
+        const markReady = () => {
+            if (image.dataset.themeLogoPath === nextLogoPath && image.dataset.themeLogoTheme === resolvedTheme) {
+                image.dataset.themeLogoReady = 'true';
+            }
+        };
+
         if (image.dataset.themeLogoPath === nextLogoPath && image.dataset.themeLogoTheme === resolvedTheme) {
+            if (resolvedTheme === 'space' && image.complete) {
+                markReady();
+            }
             return;
         }
 
+        image.dataset.themeLogoReady = resolvedTheme === 'space' ? 'false' : 'true';
         image.dataset.themeLogoPath = nextLogoPath;
         image.dataset.themeLogoTheme = resolvedTheme;
 
         if (image.getAttribute('src') !== nextLogoPath) {
+            if (resolvedTheme === 'space') {
+                image.addEventListener('load', markReady, { once: true });
+                image.addEventListener('error', markReady, { once: true });
+            }
             image.setAttribute('src', nextLogoPath);
+            if (resolvedTheme === 'space' && image.complete) {
+                markReady();
+            }
+            return;
+        }
+
+        if (resolvedTheme === 'space' && image.complete) {
+            markReady();
         }
     }
 
@@ -3122,6 +3149,14 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
 
         document.documentElement.dataset.themeLogoPath = nextLogoPath;
         document.documentElement.dataset.themeLogoTheme = resolvedTheme;
+
+        if (resolvedTheme === 'space') {
+            document.querySelectorAll(THEME_LOGO_SELECTOR).forEach((image) => {
+                if (image instanceof HTMLImageElement) {
+                    image.dataset.themeLogoReady = 'false';
+                }
+            });
+        }
 
         return preloadThemeLogoAsset(nextLogoPath).finally(() => {
             if (typeof window.requestAnimationFrame === 'function') {
@@ -4647,6 +4682,10 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
     let analyticsStateHydrationPromise = null;
     let analyticsStateSaveTimerId = 0;
     let analyticsStatePendingOverrides = null;
+    let dealsStateCacheUserKey = '';
+    let dealsStateCache = null;
+    let dealsStateHydrationPromise = null;
+    let dealsStateSaveTimerId = 0;
 
     function getDefaultAnalyticsStateSnapshot() {
         return {
@@ -4654,6 +4693,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             numbersWindow: 'all',
             closedDealDraft: null,
             whiteboardItems: [],
+            yearBoxes: [],
             metrics: {
                 offerTermsSentCount: 0,
                 offersSubmittedCount: 0,
@@ -4695,6 +4735,26 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             .slice(0, 200);
     }
 
+    function normalizeAnalyticsYearBoxesState(value) {
+        if (!Array.isArray(value)) {
+            return [];
+        }
+
+        return value
+            .map((item) => {
+                const safeItem = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
+                const year = String(safeItem.year || '').replace(/[^0-9]/g, '').slice(0, 4);
+                const amount = String(safeItem.amount || '').replace(/[^0-9]/g, '').slice(0, 18);
+                if (!year) {
+                    return null;
+                }
+
+                return { year, amount };
+            })
+            .filter(Boolean)
+            .slice(0, 8);
+    }
+
     function hasAnalyticsDraftContent(value) {
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
             return false;
@@ -4721,6 +4781,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             numbersWindow: ['q1', 'q2', 'q3', 'q4', 'all'].includes(normalizedWindow) ? normalizedWindow : 'all',
             closedDealDraft: normalizedDraft,
             whiteboardItems: normalizeAnalyticsWhiteboardItems(state.whiteboardItems),
+            yearBoxes: normalizeAnalyticsYearBoxesState(state.yearBoxes),
             metrics: normalizeAnalyticsStateMetrics(state.metrics),
             updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
         };
@@ -4770,6 +4831,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const currentWhiteboardItems = normalizeAnalyticsWhiteboardItems(getUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, userKey));
         if (!currentWhiteboardItems.length && normalizedState.whiteboardItems.length) {
             setUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, userKey, normalizedState.whiteboardItems, { silent: true });
+        }
+
+        const currentYearBoxes = normalizeAnalyticsYearBoxesState(getUserScopedItems(ANALYTICS_WHITEBOARD_YEAR_BOXES_KEY, userKey));
+        if (!currentYearBoxes.length && normalizedState.yearBoxes.length) {
+            setUserScopedItems(ANALYTICS_WHITEBOARD_YEAR_BOXES_KEY, userKey, normalizedState.yearBoxes, { silent: true });
         }
 
         return normalizedState;
@@ -4860,6 +4926,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         const localDraftValue = getUserScopedValue(ANALYTICS_CLOSED_DEAL_DRAFT_KEY, userKey, null);
         const localDraft = hasAnalyticsDraftContent(localDraftValue) ? localDraftValue : null;
         const localWhiteboardItems = normalizeAnalyticsWhiteboardItems(getUserScopedItems(ANALYTICS_WHITEBOARD_ITEMS_KEY, userKey));
+        const localYearBoxes = normalizeAnalyticsYearBoxesState(getUserScopedItems(ANALYTICS_WHITEBOARD_YEAR_BOXES_KEY, userKey));
 
         return normalizeAnalyticsStatePayload({
             ...(analyticsStateCache || getDefaultAnalyticsStateSnapshot()),
@@ -4867,6 +4934,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             numbersWindow: ['q1', 'q2', 'q3', 'q4', 'all'].includes(localWindow) ? localWindow : 'all',
             closedDealDraft: localDraft,
             whiteboardItems: localWhiteboardItems,
+            yearBoxes: localYearBoxes,
             ...overrides,
             metrics: {
                 ...((analyticsStateCache && analyticsStateCache.metrics) || getDefaultAnalyticsStateSnapshot().metrics),
@@ -4874,6 +4942,247 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             },
             updatedAt: Date.now()
         });
+    }
+
+    function isImportedDealsStateItem(item) {
+        if (!item || typeof item !== 'object') {
+            return false;
+        }
+
+        const itemId = String(item.id || '').trim().toLowerCase();
+        if (itemId.startsWith('manual:')) {
+            return true;
+        }
+
+        const snapshot = item.propertySnapshot && typeof item.propertySnapshot === 'object'
+            ? item.propertySnapshot
+            : null;
+        const mlsNumber = String(snapshot?.mlsNumber || '').trim().toUpperCase();
+        const idxValue = String(snapshot?.idx || '').trim().toLowerCase();
+        return mlsNumber === 'MANUAL' || idxValue === 'manual mls import';
+    }
+
+    function normalizeDealsStateClickedProperties(value) {
+        if (!Array.isArray(value)) {
+            return [];
+        }
+
+        return value
+            .filter((item) => item && typeof item === 'object' && !isImportedDealsStateItem(item))
+            .map((item) => ({
+                ...item,
+                id: String(item.id || '').trim(),
+                address: String(item.address || item.propertyAddress || item.propertySnapshot?.address || '').trim(),
+                location: String(item.location || '').trim(),
+                price: String(item.price || '').trim(),
+                beds: String(item.beds || '').trim(),
+                baths: String(item.baths || '').trim(),
+                area: String(item.area || '').trim(),
+                garage: String(item.garage || '').trim(),
+                lotSize: String(item.lotSize || '').trim(),
+                status: String(item.status || '').trim().toLowerCase(),
+                roi: String(item.roi || '').trim(),
+                imageUrl: String(item.imageUrl || '').trim(),
+                clickedAt: Math.max(Number(item.clickedAt) || 0, 0),
+                propertySnapshot: item.propertySnapshot && typeof item.propertySnapshot === 'object'
+                    ? { ...item.propertySnapshot }
+                    : {}
+            }))
+            .filter((item) => item.id && item.address)
+            .sort((left, right) => (Number(right.clickedAt) || 0) - (Number(left.clickedAt) || 0))
+            .slice(0, 120);
+    }
+
+    function getDefaultDealsStateSnapshot() {
+        return {
+            clickedProperties: [],
+            updatedAt: 0
+        };
+    }
+
+    function normalizeDealsStatePayload(value) {
+        const state = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        return {
+            clickedProperties: normalizeDealsStateClickedProperties(state.clickedProperties),
+            updatedAt: Math.max(Number(state.updatedAt) || 0, 0)
+        };
+    }
+
+    function mergeDealsStateClickedProperties(primaryItems, secondaryItems) {
+        const mergedItemsByKey = new Map();
+
+        const mergeIntoMap = (items, shouldOverrideExisting) => {
+            normalizeDealsStateClickedProperties(items).forEach((item) => {
+                const propertyKey = makePropertyStorageKey(
+                    item.propertySnapshot?.address
+                    || item.address
+                    || item.propertyAddress
+                    || item.id
+                );
+                if (!propertyKey) {
+                    return;
+                }
+
+                if (!mergedItemsByKey.has(propertyKey) || shouldOverrideExisting) {
+                    mergedItemsByKey.set(propertyKey, item);
+                }
+            });
+        };
+
+        mergeIntoMap(primaryItems, false);
+        mergeIntoMap(secondaryItems, true);
+
+        return Array.from(mergedItemsByKey.values())
+            .sort((left, right) => (Number(right.clickedAt) || 0) - (Number(left.clickedAt) || 0))
+            .slice(0, 120);
+    }
+
+    async function requestDealsStateApi(pathname, options = {}) {
+        const token = getCloudUploadAuthToken();
+        if (!token) {
+            throw new Error('Sign in is required to sync My Deals across devices.');
+        }
+
+        const method = String(options.method || 'GET').trim().toUpperCase() || 'GET';
+        const headers = {
+            Authorization: `Bearer ${token}`,
+            ...(options.headers || {})
+        };
+
+        if (method !== 'GET' && method !== 'HEAD' && !headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        const response = await fetch(pathname, {
+            ...options,
+            method,
+            headers
+        });
+
+        let payload = null;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            payload = null;
+        }
+
+        if (!response.ok) {
+            throw new Error(payload && payload.error ? payload.error : 'My Deals sync failed.');
+        }
+
+        return payload;
+    }
+
+    function buildLocalDealsStateSnapshot(workspaceUser, overrides = {}) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        const clickedProperties = Object.prototype.hasOwnProperty.call(overrides, 'clickedProperties')
+            ? normalizeDealsStateClickedProperties(overrides.clickedProperties)
+            : normalizeDealsStateClickedProperties(getUserScopedItems(DEALS_CLICKED_KEY, userKey));
+
+        return normalizeDealsStatePayload({
+            ...(dealsStateCache || getDefaultDealsStateSnapshot()),
+            ...overrides,
+            clickedProperties,
+            updatedAt: Date.now()
+        });
+    }
+
+    async function saveDealsStateToServer(workspaceUser, overrides = {}) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        if (!userKey || !getCloudUploadAuthToken()) {
+            return null;
+        }
+
+        const nextState = buildLocalDealsStateSnapshot(safeUser, overrides);
+        dealsStateCacheUserKey = userKey;
+        dealsStateCache = nextState;
+
+        try {
+            const payload = await requestDealsStateApi('/api/my-deals/state', {
+                method: 'PUT',
+                body: JSON.stringify({ state: nextState })
+            });
+            dealsStateCache = normalizeDealsStatePayload(payload && payload.state);
+            setUserScopedItems(DEALS_CLICKED_KEY, userKey, dealsStateCache.clickedProperties, { silent: true });
+            return dealsStateCache;
+        } catch (error) {
+            console.error('Failed to save My Deals state to server:', error);
+            return null;
+        }
+    }
+
+    async function hydrateDealsStateFromServer(workspaceUser) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        const token = getCloudUploadAuthToken();
+
+        if (!userKey || !token) {
+            dealsStateCacheUserKey = userKey;
+            dealsStateCache = buildLocalDealsStateSnapshot(safeUser);
+            return dealsStateCache;
+        }
+
+        if (dealsStateCacheUserKey === userKey && dealsStateCache) {
+            return dealsStateCache;
+        }
+
+        if (dealsStateHydrationPromise && dealsStateCacheUserKey === userKey) {
+            return dealsStateHydrationPromise;
+        }
+
+        dealsStateCacheUserKey = userKey;
+        const pendingHydration = (async () => {
+            try {
+                const payload = await requestDealsStateApi('/api/my-deals/state');
+                const serverState = normalizeDealsStatePayload(payload && payload.state);
+                const localClickedProperties = normalizeDealsStateClickedProperties(getUserScopedItems(DEALS_CLICKED_KEY, userKey));
+                const mergedClickedProperties = mergeDealsStateClickedProperties(serverState.clickedProperties, localClickedProperties);
+                const shouldPersistMergedState = JSON.stringify(serverState.clickedProperties) !== JSON.stringify(mergedClickedProperties);
+
+                dealsStateCache = normalizeDealsStatePayload({
+                    ...serverState,
+                    clickedProperties: mergedClickedProperties,
+                    updatedAt: Date.now()
+                });
+                setUserScopedItems(DEALS_CLICKED_KEY, userKey, mergedClickedProperties, { silent: true });
+
+                if (shouldPersistMergedState) {
+                    await saveDealsStateToServer(safeUser, { clickedProperties: mergedClickedProperties });
+                }
+
+                return dealsStateCache;
+            } catch (error) {
+                console.error('Failed to load My Deals state from server:', error);
+                dealsStateCache = buildLocalDealsStateSnapshot(safeUser);
+                return dealsStateCache;
+            } finally {
+                if (dealsStateHydrationPromise === pendingHydration) {
+                    dealsStateHydrationPromise = null;
+                }
+            }
+        })();
+
+        dealsStateHydrationPromise = pendingHydration;
+        return pendingHydration;
+    }
+
+    function scheduleDealsStateSave(workspaceUser, options = {}) {
+        const safeUser = workspaceUser && typeof workspaceUser === 'object' ? workspaceUser : null;
+        const userKey = String(safeUser && safeUser.key || '').trim();
+        if (!userKey || !getCloudUploadAuthToken()) {
+            return;
+        }
+
+        if (dealsStateSaveTimerId) {
+            window.clearTimeout(dealsStateSaveTimerId);
+        }
+
+        dealsStateSaveTimerId = window.setTimeout(() => {
+            dealsStateSaveTimerId = 0;
+            void saveDealsStateToServer(safeUser);
+        }, options.immediate ? 0 : 250);
     }
 
     async function saveAnalyticsStateToServer(workspaceUser, overrides = {}) {
@@ -7048,21 +7357,11 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         }
 
         function normalizeYearBoxes(value) {
-            if (!Array.isArray(value)) {
-                return [];
-            }
-
-            return value
-                .map((item) => {
-                    const safeItem = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
-                    const year = String(safeItem.year || '').replace(/[^0-9]/g, '').slice(0, 4);
-                    const amount = normalizeYearAmountDigits(safeItem.amount || '');
-                    if (!year) {
-                        return null;
-                    }
-                    return { year, amount };
-                })
-                .filter(Boolean)
+            return normalizeAnalyticsYearBoxesState(value)
+                .map((item) => ({
+                    year: item.year,
+                    amount: normalizeYearAmountDigits(item.amount)
+                }))
                 .slice(0, 8);
         }
 
@@ -7091,6 +7390,9 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         function setYearBoxes(items) {
             const normalized = normalizeYearBoxes(items);
             setUserScopedItems(ANALYTICS_WHITEBOARD_YEAR_BOXES_KEY, workspaceUser.key, normalized);
+            scheduleAnalyticsStateSave(workspaceUser, {
+                yearBoxes: normalizeAnalyticsYearBoxesState(normalized)
+            });
         }
 
         function collectYearBoxesFromDom() {
@@ -7337,6 +7639,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             removeButton.textContent = '×';
             removeButton.addEventListener('click', () => {
                 listItem.remove();
+                cleanupWhiteboardDrafts();
                 scheduleWhiteboardSave();
             });
 
@@ -7369,6 +7672,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
                 const snapshot = syncRowState(listItem);
                 if (!snapshot.text) {
                     listItem.remove();
+                    cleanupWhiteboardDrafts();
                 }
                 scheduleWhiteboardSave();
             });
@@ -7381,12 +7685,25 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
         function cleanupWhiteboardDrafts(preferredRow = null) {
             const rows = Array.from(listEl.querySelectorAll('.analytics-whiteboard-item'));
             const emptyRows = rows.filter((row) => !normalizeWhiteboardText(getRowEditor(row) ? getRowEditor(row).textContent : ''));
+            let draftRow = preferredRow && emptyRows.includes(preferredRow) ? preferredRow : null;
+
+            if (!draftRow && emptyRows.length > 0) {
+                draftRow = emptyRows[0];
+            }
+
             emptyRows.forEach((row) => {
-                if (preferredRow && row === preferredRow) {
+                if (draftRow && row === draftRow) {
                     return;
                 }
                 row.remove();
             });
+
+            if (!draftRow && !listEl.querySelector('.analytics-whiteboard-item')) {
+                draftRow = createWhiteboardRow();
+                listEl.appendChild(draftRow);
+            }
+
+            return draftRow;
         }
 
         function renderWhiteboard() {
@@ -7399,6 +7716,7 @@ const CALENDAR_EVENTS_KEY = 'dashboardCalendarEvents';
             items.forEach((item) => {
                 listEl.appendChild(createWhiteboardRow(item));
             });
+            cleanupWhiteboardDrafts();
         }
 
         window.addEventListener('dashboard-data-updated', renderWhiteboard);
@@ -7874,8 +8192,16 @@ function initNavbarDateTime() {
         const sidebar = document.getElementById('sidebar');
 
         if (menuToggle && sidebar) {
+            const syncMobileMenuState = () => {
+                const isOpen = sidebar.classList.contains('open');
+                menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            };
+
+            syncMobileMenuState();
+
             menuToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('open');
+                syncMobileMenuState();
             });
 
             document.addEventListener('click', (event) => {
@@ -7883,6 +8209,7 @@ function initNavbarDateTime() {
                     !sidebar.contains(event.target) &&
                     !menuToggle.contains(event.target)) {
                     sidebar.classList.remove('open');
+                    syncMobileMenuState();
                 }
             });
         }
@@ -10795,7 +11122,7 @@ function initNavbarDateTime() {
             return false;
         }
 
-        return String(widgetId || '').trim() !== 'property-submissions';
+        return !['property-submissions', 'employee-tracker-sheet'].includes(String(widgetId || '').trim());
     }
 
     function isAdminControlsPage() {
@@ -20122,6 +20449,7 @@ function initNavbarDateTime() {
 
             try {
                 setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+                scheduleDealsStateSave(workspaceUser);
             } catch (error) {
                 try {
                     const fallbackItems = nextItems.map(item => ({
@@ -20138,6 +20466,7 @@ function initNavbarDateTime() {
                         clickedAt: item.clickedAt
                     })).slice(0, 40);
                     setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, fallbackItems);
+                    scheduleDealsStateSave(workspaceUser);
                 } catch (fallbackError) {
                     // Ignore clicked-history persistence issues so MLS navigation still works.
                 }
@@ -22727,17 +23056,31 @@ function initNavbarDateTime() {
             return 'Property';
         }
 
-        function populateDealsImportForm(listing) {
+        function populateDealsImportForm(listing, options = {}) {
             if (!listing || typeof listing !== 'object' || !(importForm instanceof HTMLFormElement)) {
                 return;
             }
+
+            const settings = options && typeof options === 'object' ? options : {};
+            const preserveExistingValues = settings.preserveExistingValues !== false;
 
             const setFieldValue = (id, value) => {
                 const field = document.getElementById(id);
                 if (!field) {
                     return;
                 }
-                field.value = String(value || '').trim();
+
+                const nextValue = String(value || '').trim();
+                if (!nextValue) {
+                    return;
+                }
+
+                const currentValue = String(field.value || '').trim();
+                if (preserveExistingValues && currentValue) {
+                    return;
+                }
+
+                field.value = nextValue;
                 if (field instanceof HTMLInputElement && field.dataset.dealsAutoCommas === 'true') {
                     applyDealsImportDigitGrouping(field);
                 }
@@ -22763,7 +23106,10 @@ function initNavbarDateTime() {
 
             const statusField = document.getElementById('deals-import-status');
             if (statusField && listing.status) {
-                statusField.value = String(listing.status).trim().toLowerCase();
+                const currentStatus = String(statusField.value || '').trim();
+                if (!preserveExistingValues || !currentStatus) {
+                    statusField.value = String(listing.status).trim().toLowerCase();
+                }
             }
         }
 
@@ -24180,6 +24526,7 @@ function initNavbarDateTime() {
             const items = getExactUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key);
             const nextItems = items.filter(entry => String(entry.id || '') !== itemId);
             setUserScopedItems(DEALS_CLICKED_KEY, workspaceUser.key, nextItems);
+            scheduleDealsStateSave(workspaceUser, { immediate: true });
             showDashboardToast('success', 'Property Removed', `${propertyLabel} was removed from your My Deals list.`);
             window.dispatchEvent(new CustomEvent('dashboard-data-updated'));
         }
@@ -24781,6 +25128,7 @@ function initNavbarDateTime() {
         migrateImportedPropertiesAcrossUsers();
         migrateLegacyImportedPropertiesForWorkspaceUser();
         migrateLegacyClickedPropertiesForWorkspaceUser();
+        await hydrateDealsStateFromServer(workspaceUser);
         await hydrateImportedPropertiesFromServer();
         render();
         window.addEventListener('storage', render);

@@ -203,6 +203,12 @@
             z-index: 1;
         }
 
+        .gmail-mobile-drawer-toggle,
+        .gmail-mobile-drawer-scrim,
+        .gmail-compose-fab {
+            display: none;
+        }
+
         .gmail-sidebar {
             border-right: 1px solid var(--gmail-border);
             background: linear-gradient(180deg, color-mix(in srgb, var(--glass-bg) 92%, rgba(255, 255, 255, 0.08) 8%), color-mix(in srgb, var(--glass-bg) 98%, rgba(255, 255, 255, 0.02) 2%));
@@ -1762,6 +1768,8 @@
         @media (max-width: 1100px) {
             .gmail-main {
                 min-height: auto;
+                position: relative;
+                padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 102px);
             }
 
             .gmail-sidebar {
@@ -1775,7 +1783,27 @@
             }
 
             .gmail-sidebar-panel {
-                order: 2;
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                z-index: 80;
+                width: min(82vw, 320px);
+                max-width: 320px;
+                min-height: 100dvh;
+                max-height: 100dvh;
+                overflow-y: auto;
+                order: initial;
+                margin: 0;
+                padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+                border-radius: 0 26px 26px 0;
+                background: color-mix(in srgb, var(--gmail-card) 92%, rgba(255, 255, 255, 0.12) 8%);
+                box-shadow: 0 24px 54px rgba(15, 23, 42, 0.28);
+                transform: translateX(calc(-100% - 24px));
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease, visibility 0s linear 0.3s;
             }
 
             .gmail-list-panel {
@@ -1785,6 +1813,82 @@
             .gmail-reader-panel {
                 order: 3;
                 min-height: 420px;
+            }
+
+            .gmail-page.is-mobile-drawer-open .gmail-sidebar-panel {
+                transform: translateX(0);
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease, visibility 0s linear 0s;
+            }
+
+            .gmail-mobile-drawer-toggle {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 46px;
+                height: 46px;
+                border: 1px solid var(--gmail-border);
+                border-radius: 16px;
+                background: color-mix(in srgb, var(--gmail-card-strong) 78%, rgba(255, 255, 255, 0.12) 22%);
+                color: var(--gmail-text);
+                box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+                cursor: pointer;
+                flex-shrink: 0;
+            }
+
+            .gmail-mobile-drawer-toggle:hover,
+            .gmail-mobile-drawer-toggle:focus-visible {
+                transform: translateY(-1px);
+                box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+                outline: none;
+            }
+
+            .gmail-mobile-drawer-scrim {
+                position: fixed;
+                inset: 0;
+                z-index: 70;
+                background: rgba(15, 23, 42, 0.34);
+                backdrop-filter: blur(4px);
+            }
+
+            .gmail-mobile-drawer-scrim.is-visible {
+                display: block;
+            }
+
+            .gmail-compose-card {
+                display: none;
+            }
+
+            .gmail-compose-fab {
+                position: fixed;
+                right: 18px;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+                z-index: 65;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 62px;
+                height: 62px;
+                border: none;
+                border-radius: 999px;
+                background: linear-gradient(135deg, var(--gmail-accent), #ea4335);
+                color: #fff;
+                box-shadow: 0 22px 42px rgba(var(--accent-rgb), 0.26), 0 18px 34px rgba(15, 23, 42, 0.18);
+                cursor: pointer;
+            }
+
+            .gmail-compose-fab:hover,
+            .gmail-compose-fab:focus-visible {
+                transform: translateY(-2px) scale(1.01);
+                box-shadow: 0 26px 46px rgba(var(--accent-rgb), 0.3), 0 22px 38px rgba(15, 23, 42, 0.22);
+                outline: none;
+            }
+
+            .gmail-compose-fab svg {
+                width: 24px;
+                height: 24px;
             }
         }
 
@@ -1807,6 +1911,7 @@
             }
 
             .gmail-title-group {
+                width: 100%;
                 flex-wrap: wrap;
                 align-items: flex-start;
             }
@@ -1816,6 +1921,7 @@
             }
 
             .gmail-actions {
+                width: 100%;
                 justify-content: flex-start;
             }
 
@@ -1825,6 +1931,25 @@
 
             .gmail-mail-date {
                 justify-self: start;
+            }
+
+            .gmail-sidebar-panel {
+                width: min(88vw, 320px);
+            }
+
+            .gmail-compose-fab {
+                width: 58px;
+                height: 58px;
+                right: 14px;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .gmail-sidebar-panel,
+            .gmail-compose-fab,
+            .gmail-mobile-drawer-toggle {
+                transition: none;
             }
         }
     </style>
@@ -1987,6 +2112,9 @@
         <main class="main-content gmail-main">
             <section class="gmail-topbar">
                 <div class="gmail-title-group">
+                    <button class="gmail-mobile-drawer-toggle" id="gmail-mobile-drawer-toggle" type="button" aria-label="Open Gmail folders" aria-expanded="false">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
                     <img class="gmail-title-logo" src="png photos/favicon/APP LOGO.png" alt="FAST favicon logo">
                     <h1>Gmail | FAST BRIDGE GROUP LLC</h1>
                 </div>
@@ -2002,6 +2130,8 @@
                 <div id="gmail-banner-text">Mailbox connected.</div>
                 <button class="gmail-btn gmail-btn-secondary" id="gmail-banner-dismiss" type="button">Dismiss</button>
             </section>
+
+            <div class="gmail-mobile-drawer-scrim" id="gmail-mobile-drawer-scrim" hidden></div>
 
             <section class="gmail-shell">
                 <aside class="gmail-panel gmail-sidebar-panel">
@@ -2234,6 +2364,10 @@
                     </div>
                 </section>
             </section>
+
+            <button class="gmail-compose-fab" id="gmail-compose-fab" type="button" aria-label="Compose Gmail message">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>
+            </button>
         <footer class="site-legal-footer">
     <div class="site-legal-footer-inner">
         <div class="site-legal-footer-brand">FAST BRIDGE GROUP 2026</div>
@@ -2413,6 +2547,9 @@
             const moreMenu = document.getElementById('gmail-more-menu');
             const categoriesToggle = document.getElementById('gmail-categories-toggle');
             const categoriesMenu = document.getElementById('gmail-categories-menu');
+            const gmailPage = document.querySelector('.gmail-page');
+            const mobileDrawerToggle = document.getElementById('gmail-mobile-drawer-toggle');
+            const mobileDrawerScrim = document.getElementById('gmail-mobile-drawer-scrim');
             const gmailShell = document.querySelector('.gmail-shell');
             const readerPanel = document.querySelector('.gmail-reader-panel');
             const readerBackButton = document.getElementById('gmail-reader-back');
@@ -2428,6 +2565,7 @@
             const readerMailbox = document.getElementById('gmail-reader-mailbox');
             const composePill = document.getElementById('gmail-compose-pill');
             const composeWindow = document.getElementById('gmail-compose-window');
+            const composeFab = document.getElementById('gmail-compose-fab');
             const readerReplyButton = document.getElementById('gmail-reader-reply');
             const composeTitle = document.getElementById('gmail-compose-title');
             const composeForm = document.getElementById('gmail-compose-form');
@@ -2466,6 +2604,7 @@
             const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
             const GMAIL_COMPOSE_SCOPE = 'https://www.googleapis.com/auth/gmail.compose';
             const GMAIL_PLANNER_STORAGE_KEY = 'personalTodoGoalsByUser';
+            const mobileDrawerMediaQuery = window.matchMedia('(max-width: 1100px)');
 
             const state = {
                 connected: false,
@@ -2496,8 +2635,54 @@
                 composeSignatureLoaded: false,
                 readerHeaderCollapsed: false,
                 selectedMessageDetail: null,
-                selectedThreadMessages: []
+                selectedThreadMessages: [],
+                mobileDrawerOpen: false
             };
+            const drawerSwipeState = {
+                startX: 0,
+                startY: 0,
+                active: false,
+                tracking: false
+            };
+
+            function isMobileDrawerMode() {
+                return Boolean(mobileDrawerMediaQuery.matches);
+            }
+
+            function syncMobileDrawerUi() {
+                const isOpen = Boolean(state.mobileDrawerOpen && isMobileDrawerMode());
+                gmailPage.classList.toggle('is-mobile-drawer-open', isOpen);
+                mobileDrawerToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                mobileDrawerScrim.hidden = !isOpen;
+                mobileDrawerScrim.classList.toggle('is-visible', isOpen);
+                document.body.style.overflow = isOpen ? 'hidden' : '';
+            }
+
+            function openMobileDrawer() {
+                if (!isMobileDrawerMode()) {
+                    return;
+                }
+
+                state.mobileDrawerOpen = true;
+                syncMobileDrawerUi();
+            }
+
+            function closeMobileDrawer() {
+                if (!state.mobileDrawerOpen) {
+                    syncMobileDrawerUi();
+                    return;
+                }
+
+                state.mobileDrawerOpen = false;
+                syncMobileDrawerUi();
+            }
+
+            function handleMobileDrawerViewportChange() {
+                if (!isMobileDrawerMode()) {
+                    state.mobileDrawerOpen = false;
+                }
+                syncMobileDrawerUi();
+            }
 
             function renderGmailOutreachPanel() {
                 // Outreach Intelligence was removed from Gmail.
@@ -3110,6 +3295,7 @@
                 state.pageHistory = [];
                 syncCombinedQuery();
                 updateSidebarSelection();
+                closeMobileDrawer();
                 loadMessages({ reset: true });
             }
 
@@ -3908,6 +4094,10 @@
             }
 
             composePill.addEventListener('click', openComposeWindow);
+            composeFab.addEventListener('click', () => {
+                closeMobileDrawer();
+                openComposeWindow();
+            });
             composeForm.addEventListener('submit', sendComposeMessage);
             composeCloseButton.addEventListener('click', () => closeComposeWindow(false));
             composeMinimizeButton.addEventListener('click', toggleComposeMinimized);
@@ -4073,6 +4263,7 @@
             actionButtons.forEach((button) => {
                 button.addEventListener('click', () => {
                     const action = String(button.dataset.gmailAction || '').trim();
+                    closeMobileDrawer();
                     if (action === 'labels') {
                         setBanner('Manage labels is not wired yet in this first Gmail release.', 'success');
                         return;
@@ -4088,6 +4279,14 @@
                 state.showCategoriesMenu = !state.showCategoriesMenu;
                 updateSidebarToggles();
             });
+            mobileDrawerToggle.addEventListener('click', () => {
+                if (state.mobileDrawerOpen) {
+                    closeMobileDrawer();
+                    return;
+                }
+                openMobileDrawer();
+            });
+            mobileDrawerScrim.addEventListener('click', closeMobileDrawer);
             connectButton.addEventListener('click', connectGmail);
             disconnectButton.addEventListener('click', disconnectGmail);
             refreshButton.addEventListener('click', () => loadMessages({ reset: true }));
@@ -4172,13 +4371,86 @@
                 if (event.key === 'Escape' && state.composeOpen) {
                     closeComposeWindow(false);
                 }
+
+                if (event.key === 'Escape' && state.mobileDrawerOpen) {
+                    closeMobileDrawer();
+                }
             });
+
+            gmailShell.addEventListener('touchstart', (event) => {
+                if (!isMobileDrawerMode()) {
+                    drawerSwipeState.tracking = false;
+                    return;
+                }
+
+                const touch = event.touches && event.touches[0];
+                if (!touch) {
+                    drawerSwipeState.tracking = false;
+                    return;
+                }
+
+                drawerSwipeState.startX = touch.clientX;
+                drawerSwipeState.startY = touch.clientY;
+                drawerSwipeState.active = true;
+                drawerSwipeState.tracking = true;
+            }, { passive: true });
+
+            gmailShell.addEventListener('touchmove', (event) => {
+                if (!drawerSwipeState.tracking || !isMobileDrawerMode()) {
+                    return;
+                }
+
+                const touch = event.touches && event.touches[0];
+                if (!touch) {
+                    return;
+                }
+
+                const deltaX = touch.clientX - drawerSwipeState.startX;
+                const deltaY = touch.clientY - drawerSwipeState.startY;
+                if (Math.abs(deltaY) > Math.abs(deltaX)) {
+                    drawerSwipeState.active = false;
+                }
+            }, { passive: true });
+
+            gmailShell.addEventListener('touchend', (event) => {
+                if (!drawerSwipeState.tracking || !isMobileDrawerMode()) {
+                    drawerSwipeState.tracking = false;
+                    return;
+                }
+
+                const touch = event.changedTouches && event.changedTouches[0];
+                if (!touch || !drawerSwipeState.active) {
+                    drawerSwipeState.tracking = false;
+                    drawerSwipeState.active = false;
+                    return;
+                }
+
+                const deltaX = touch.clientX - drawerSwipeState.startX;
+                const deltaY = touch.clientY - drawerSwipeState.startY;
+                const horizontalSwipe = Math.abs(deltaX) > 72 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15;
+
+                if (!state.mobileDrawerOpen && horizontalSwipe) {
+                    openMobileDrawer();
+                } else if (state.mobileDrawerOpen && deltaX < -56 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+                    closeMobileDrawer();
+                }
+
+                drawerSwipeState.tracking = false;
+                drawerSwipeState.active = false;
+            }, { passive: true });
+
+            if (typeof mobileDrawerMediaQuery.addEventListener === 'function') {
+                mobileDrawerMediaQuery.addEventListener('change', handleMobileDrawerViewportChange);
+            } else if (typeof mobileDrawerMediaQuery.addListener === 'function') {
+                mobileDrawerMediaQuery.addListener(handleMobileDrawerViewportChange);
+            }
 
             document.addEventListener('DOMContentLoaded', async () => {
                 readQueryFeedback();
                 syncCombinedQuery();
                 updateConnectionUi();
                 syncComposeWindowUi();
+                handleMobileDrawerViewportChange();
                 updateSidebarSelection();
                 updateSidebarToggles();
                 renderMessageList();
