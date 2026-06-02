@@ -2838,6 +2838,10 @@
             color: var(--text-primary);
         }
 
+        .community-menu-btn[data-voice-room] .community-menu-btn-meta {
+            display: none;
+        }
+
         .community-voice-room-badge {
             display: inline-flex;
             align-items: center;
@@ -3138,7 +3142,7 @@
                         <div class="card-header">
                             <div>
                                 <h2 class="card-title" id="community-welcome-title">Rules & Regulations</h2>
-                                <p class="card-subtitle">Mandatory rules for everyone inside the FAST community workspace.</p>
+                                <p class="card-subtitle">Business conduct standards for everyone operating inside the FAST community workspace.</p>
 
                     <div class="community-chat-schedule-modal" id="community-chat-schedule-modal" hidden>
                         <div class="community-voice-screen-backdrop" data-community-chat-schedule-close></div>
@@ -3168,35 +3172,35 @@
                             <article class="glass-card community-card">
                                 <h3 class="card-title">Rules & Regulations (Mandatory)</h3>
                                 <ul class="community-list">
-                                    <li>Respect is non-negotiable. All members must communicate with professionalism and respect at all times. Disrespect, harassment, or hostility will not be tolerated.</li>
-                                    <li>Stay on topic. This server is for business, meetings, and collaboration. Irrelevant conversations, spam, or off-topic messages are prohibited.</li>
-                                    <li>No interruptions during meetings. When meetings are in session, do not interrupt, talk over others, or create distractions. Wait your turn and contribute when appropriate.</li>
-                                    <li>No spam or self-promotion. Do not flood channels, send repeated messages, or promote unrelated services, products, or links without approval.</li>
-                                    <li>Confidentiality is required. Any business discussions, deals, or shared information must remain private. Leaking or sharing information outside this server is strictly prohibited.</li>
+                                    <li>Professional conduct is mandatory. Every member is expected to communicate with respect, discipline, and business professionalism at all times. Disrespect, harassment, hostility, or insubordination will not be tolerated.</li>
+                                    <li>This workspace is for company business only. Channels, meetings, and communications must stay focused on operations, collaboration, deals, training, and approved team activity. Off-topic use, spam, and unnecessary distractions are prohibited.</li>
+                                    <li>Meeting discipline is required. Do not interrupt, talk over others, derail active discussions, or create noise during calls. Wait your turn, contribute with purpose, and respect leadership direction.</li>
+                                    <li>Unauthorized promotion or misuse is prohibited. Do not flood chats, repeat messages, self-promote, advertise unrelated services, or share unapproved links, offers, or materials.</li>
+                                    <li>Confidentiality is a condition of access. Business discussions, leads, client information, deal terms, internal strategy, and shared materials must remain private and may not be disclosed outside FAST without authorization.</li>
                                 </ul>
                             </article>
                             <article class="glass-card community-card">
                                 <h3 class="card-title">Enforcement</h3>
                                 <div class="community-feed">
                                     <div class="community-feed-item">
-                                        <strong>Follow leadership instructions</strong>
-                                        <p>Moderators and leadership decisions are final. Failure to comply will result in immediate action.</p>
+                                        <strong>Leadership direction is mandatory</strong>
+                                        <p>Management, moderators, and leadership have final authority inside this workspace. Failure to follow direction may result in removal from meetings, suspension of access, or termination from the community environment.</p>
                                     </div>
                                     <div class="community-feed-item">
-                                        <strong>No inappropriate content</strong>
-                                        <p>This includes offensive language, explicit material, or anything unprofessional. Keep everything clean and business-focused.</p>
+                                        <strong>No unprofessional or inappropriate content</strong>
+                                        <p>Offensive language, explicit content, discriminatory remarks, threats, or anything that undermines a professional business environment is prohibited and may result in immediate disciplinary action.</p>
                                     </div>
                                     <div class="community-feed-item">
-                                        <strong>Be active and serious</strong>
-                                        <p>This is a results-driven environment. If you are not here to contribute, learn, or execute, you do not belong here.</p>
+                                        <strong>Business participation is expected</strong>
+                                        <p>This is a results-driven workspace. Members are expected to contribute, execute, learn, and operate seriously. Continued unproductive or unserious behavior may lead to removal from the workspace.</p>
                                     </div>
                                     <div class="community-feed-item">
-                                        <strong>No trolling or disruptive behavior</strong>
-                                        <p>Any attempt to disrupt the server, meetings, or members will result in immediate removal.</p>
+                                        <strong>No disruption, trolling, or interference</strong>
+                                        <p>Any attempt to disrupt meetings, distract team members, interfere with operations, or damage the working environment may result in immediate removal without additional warning.</p>
                                     </div>
                                     <div class="community-feed-item">
-                                        <strong>Zero tolerance enforcement</strong>
-                                        <p>Failure to follow any of these rules will result in immediate removal from the server without warning.</p>
+                                        <strong>Access may be revoked at any time</strong>
+                                        <p>Failure to follow these rules and regulations can result in immediate removal from calls, removal from the FAST community workspace, restriction of access, or termination of participation without prior notice.</p>
                                     </div>
                                 </div>
                             </article>
@@ -3673,6 +3677,7 @@
             const voiceMeta = document.getElementById('community-voice-meta');
             const voiceRoster = document.getElementById('community-voice-roster');
             const voiceMemberList = document.getElementById('community-voice-member-list');
+            const voicePresenceCard = document.querySelector('.community-voice-presence-card');
             const voiceAudio = document.getElementById('community-voice-audio');
             const voiceJoinButton = document.getElementById('community-voice-join-btn');
             const voiceLeaveButton = document.getElementById('community-voice-leave-btn');
@@ -3855,6 +3860,7 @@
             const getVoiceRoom = (roomId) => VOICE_ROOMS[String(roomId || '').trim()] || VOICE_ROOMS['meeting-room'];
             const getSelectedVoiceRoom = () => getVoiceRoom(selectedVoiceRoomId);
             const getActiveVoiceRoom = () => getVoiceRoom(activeVoiceRoomId || selectedVoiceRoomId);
+            const shouldShowLocalVoiceUi = () => Boolean(voiceChannelInteracted || voiceJoining || voiceJoined);
             const lockLocalVoiceSessionState = (durationMs = 12000) => {
                 voiceLocalSessionLockUntil = Date.now() + Math.max(0, Number(durationMs) || 0);
             };
@@ -3872,7 +3878,7 @@
                 const entry = voicePresenceByRoom[room.backendRoom];
                 return entry && Array.isArray(entry.participants) ? entry.participants : [];
             };
-            const shouldShowVoiceRoster = () => Boolean(activePanelId === VOICE_PANEL || voiceChannelInteracted || voiceJoined || voiceJoining || getPublicVoiceParticipantsForRoom(selectedVoiceRoomId).length);
+            const shouldShowVoiceRoster = () => Boolean(shouldShowLocalVoiceUi() || getPublicVoiceParticipantsForRoom(selectedVoiceRoomId).length);
             const supportsVoiceScreenShare = () => Boolean(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
             const supportsVoiceOutputSelection = () => Boolean(typeof HTMLMediaElement !== 'undefined' && HTMLMediaElement.prototype && typeof HTMLMediaElement.prototype.setSinkId === 'function');
             const escapeVoiceStageSelectorValue = (value) => {
@@ -4161,6 +4167,10 @@
             );
 
             const getAllVoiceVisualShares = () => {
+                if (!voiceJoined) {
+                    return [];
+                }
+
                 const shares = getActiveLocalVisualShares();
 
                 for (const [participantId, entry] of voiceRemoteVideoByParticipant.entries()) {
@@ -4589,13 +4599,16 @@
             };
 
             const renderVoiceToolbar = () => {
-                const isVisible = Boolean(voiceJoined);
-                const shouldShowHangup = Boolean(voiceJoined);
+                const isVisible = shouldShowLocalVoiceUi();
+                const shouldShowHangup = shouldShowLocalVoiceUi();
                 if (voiceToolbox) {
                     voiceToolbox.hidden = !isVisible;
                 }
                 if (voiceToolbar) {
                     voiceToolbar.hidden = !isVisible;
+                }
+                if (voiceInviteButton) {
+                    voiceInviteButton.hidden = !shouldShowLocalVoiceUi();
                 }
 
                 if (voiceHangupButton) {
@@ -4653,7 +4666,7 @@
             };
 
             const hangupVoiceLounge = async () => {
-                const shouldPlayLeaveSound = Boolean(voiceParticipantId);
+                const shouldPlayLeaveSound = Boolean(voiceParticipantId || shouldShowLocalVoiceUi());
                 unlockVoiceSoundEffects();
                 if (shouldPlayLeaveSound) {
                     playVoiceLeaveSound();
@@ -7018,9 +7031,53 @@
                 const selectedRoom = getSelectedVoiceRoom();
                 const publicParticipants = getPublicVoiceParticipantsForRoom(selectedRoom.id);
                 const people = [];
+                const seenMemberIds = new Set();
+                const seenDisplayKeys = new Set();
+                const currentUser = getCurrentUserProfile();
+                const currentUserName = String(currentUser.name || '').trim().toLowerCase();
+                const currentUserAvatar = String(currentUser.avatarImage || '').trim();
+                const registerRosterIdentity = (memberId, displayName, avatarImage) => {
+                    const normalizedMemberId = String(memberId || '').trim();
+                    const normalizedName = String(displayName || '').trim().toLowerCase();
+                    const normalizedAvatar = String(avatarImage || '').trim();
+                    if (normalizedMemberId) {
+                        seenMemberIds.add(normalizedMemberId);
+                    }
+                    if (normalizedName) {
+                        seenDisplayKeys.add(`${normalizedName}::${normalizedAvatar}`);
+                    }
+                };
+                const isDuplicateRosterParticipant = (participant) => {
+                    const participantId = String(participant && participant.id || '').trim();
+                    const participantName = String(participant && participant.name || '').trim();
+                    const participantAvatar = String(participant && participant.avatarImage || '').trim();
+                    const normalizedParticipantName = participantName.toLowerCase();
+                    const displayKey = normalizedParticipantName ? `${normalizedParticipantName}::${participantAvatar}` : '';
 
-                if (voiceJoined) {
-                    const currentUser = getCurrentUserProfile();
+                    if (participantId && seenMemberIds.has(participantId)) {
+                        return true;
+                    }
+
+                    if (displayKey && seenDisplayKeys.has(displayKey)) {
+                        return true;
+                    }
+
+                    if (!participantName) {
+                        return false;
+                    }
+
+                    if (normalizedParticipantName !== currentUserName) {
+                        return false;
+                    }
+
+                    if (!currentUserAvatar || !participantAvatar || participantAvatar === currentUserAvatar) {
+                        return true;
+                    }
+
+                    return false;
+                };
+
+                if (shouldShowLocalVoiceUi()) {
                     people.push({
                         memberId: 'self',
                         name: currentUser.name,
@@ -7031,28 +7088,44 @@
                         linkHref: '',
                         canToggleLocalMute: false
                     });
+                    registerRosterIdentity('self', currentUser.name, currentUser.avatarImage);
                 }
 
                 const rosterParticipants = voiceJoined ? voiceParticipants : publicParticipants;
                 rosterParticipants.forEach((participant) => {
+                    if (isDuplicateRosterParticipant(participant)) {
+                        return;
+                    }
+
                     const participantId = String(participant.id || '').trim() || `member-${people.length + 1}`;
+                    const participantName = String(participant.name || 'FAST User').trim() || 'FAST User';
+                    const participantAvatar = String(participant.avatarImage || '').trim();
                     people.push({
                         memberId: participantId,
-                        name: String(participant.name || 'FAST User').trim() || 'FAST User',
+                        name: participantName,
                         subtitle: '',
                         badge: '',
-                        avatarImage: String(participant.avatarImage || '').trim(),
+                        avatarImage: participantAvatar,
                         linkLabel: '',
                         linkHref: '',
                         canToggleLocalMute: false,
                         locallyMuted: isVoiceParticipantLocallyMuted(participantId)
                     });
+                    registerRosterIdentity(participantId, participantName, participantAvatar);
                 });
 
                 voiceMemberList.innerHTML = '';
                 people.forEach((person) => {
                     voiceMemberList.appendChild(createVoiceMemberElement(person));
                 });
+
+                if (voicePresenceCard) {
+                    voicePresenceCard.hidden = people.length === 0;
+                }
+
+                if (voiceRoster && !shouldShowLocalVoiceUi()) {
+                    voiceRoster.hidden = people.length === 0;
+                }
             };
 
             const renderVoiceState = (state) => {
