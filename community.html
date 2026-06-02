@@ -389,12 +389,14 @@
             position: relative;
             overflow: hidden;
             gap: 18px;
-            border-color: rgba(191, 219, 254, 0.18);
+            border-color: color-mix(in srgb, var(--glass-border) 78%, rgba(var(--accent-rgb), 0.22) 22%);
             background:
-                radial-gradient(circle at top right, rgba(56, 189, 248, 0.16), transparent 30%),
-                radial-gradient(circle at bottom left, rgba(244, 114, 182, 0.14), transparent 34%),
-                linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 24px 60px rgba(15, 23, 42, 0.12);
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.16), transparent 30%),
+                radial-gradient(circle at bottom left, rgba(var(--accent-rgb), 0.12), transparent 34%),
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--glass-bg) 88%, rgba(255, 255, 255, 0.08) 12%),
+                    color-mix(in srgb, var(--glass-bg) 94%, rgba(15, 23, 42, 0.08) 6%));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 24px 60px rgba(15, 23, 42, 0.12);
         }
 
         .community-panel[data-community-panel="global-chat"]::before {
@@ -403,6 +405,25 @@
             inset: 0;
             pointer-events: none;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 28%);
+        }
+
+        .community-panel[data-community-panel="global-chat"] .card-header {
+            padding: 18px 20px;
+            border-radius: 22px;
+            border: 1px solid color-mix(in srgb, var(--glass-border) 80%, rgba(var(--accent-rgb), 0.18) 20%);
+            background:
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--glass-bg) 90%, rgba(255, 255, 255, 0.14) 10%),
+                    color-mix(in srgb, var(--glass-bg) 84%, rgba(var(--accent-light-rgb), 0.12) 16%));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 28px rgba(15, 23, 42, 0.08);
+        }
+
+        .community-panel[data-community-panel="global-chat"] .card-title {
+            color: var(--text-primary);
+        }
+
+        .community-panel[data-community-panel="global-chat"] .card-subtitle {
+            color: var(--text-secondary);
         }
 
         .community-panel[data-community-panel="global-chat"] > * {
@@ -1173,19 +1194,23 @@
             padding: 18px;
             overflow-y: auto;
             border-radius: 22px;
-            border: 1px solid rgba(191, 219, 254, 0.22);
+            border: 1px solid color-mix(in srgb, var(--glass-border) 80%, rgba(var(--accent-rgb), 0.18) 20%);
             background:
-                linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.82));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 18px 36px rgba(15, 23, 42, 0.08);
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--glass-bg) 90%, rgba(255, 255, 255, 0.08) 10%),
+                    color-mix(in srgb, var(--glass-bg) 84%, rgba(15, 23, 42, 0.1) 16%));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 36px rgba(15, 23, 42, 0.08);
             scrollbar-gutter: stable;
         }
 
         .community-chat-empty {
             padding: 20px;
             border-radius: 20px;
-            border: 1px dashed rgba(96, 165, 250, 0.28);
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(219, 234, 254, 0.72));
-            color: #475569;
+            border: 1px dashed rgba(var(--accent-rgb), 0.3);
+            background: linear-gradient(145deg,
+                color-mix(in srgb, var(--glass-bg) 88%, rgba(255, 255, 255, 0.08) 12%),
+                color-mix(in srgb, var(--glass-bg) 82%, rgba(var(--accent-light-rgb), 0.14) 18%));
+            color: var(--text-secondary);
             line-height: 1.7;
         }
 
@@ -1206,6 +1231,16 @@
             border-color: rgba(96, 165, 250, 0.28);
             background: linear-gradient(145deg, rgba(219, 234, 254, 0.96), rgba(224, 231, 255, 0.9));
             box-shadow: 0 16px 32px rgba(59, 130, 246, 0.12);
+        }
+
+        .community-chat-message.is-scheduled-pending {
+            opacity: 0.62;
+            border-style: dashed;
+        }
+
+        .community-chat-message.is-own.is-scheduled-pending {
+            background: linear-gradient(145deg, rgba(191, 219, 254, 0.88), rgba(224, 231, 255, 0.78));
+            box-shadow: 0 14px 28px rgba(59, 130, 246, 0.08);
         }
 
         .community-chat-message-head {
@@ -1334,6 +1369,31 @@
             font-style: italic;
         }
 
+        .community-chat-scheduled-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--accent-rgb), 0.24);
+            background: rgba(var(--accent-rgb), 0.12);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
+        .community-chat-scheduled-pill svg {
+            width: 13px;
+            height: 13px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
         .community-chat-status {
             min-height: 20px;
             color: #64748b;
@@ -1346,19 +1406,30 @@
             gap: 12px;
             padding: 18px;
             border-radius: 22px;
-            border: 1px solid rgba(191, 219, 254, 0.22);
+            border: 1px solid color-mix(in srgb, var(--glass-border) 82%, rgba(var(--accent-rgb), 0.18) 18%);
             background:
-                linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(239, 246, 255, 0.82));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 16px 34px rgba(15, 23, 42, 0.08);
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--glass-bg) 92%, rgba(255, 255, 255, 0.12) 8%),
+                    color-mix(in srgb, var(--glass-bg) 86%, rgba(var(--accent-light-rgb), 0.12) 14%));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 16px 34px rgba(15, 23, 42, 0.08);
+        }
+
+        .community-chat-composer .form-group label {
+            color: var(--text-primary);
+            font-weight: 800;
         }
 
         .community-chat-input {
             width: 100%;
             min-height: 120px;
             resize: vertical;
-            border-color: rgba(191, 219, 254, 0.24);
-            background: rgba(255, 255, 255, 0.92);
-            color: #0f172a;
+            border-color: color-mix(in srgb, var(--glass-border) 82%, rgba(var(--accent-rgb), 0.18) 18%);
+            background: color-mix(in srgb, var(--glass-bg) 82%, rgba(255, 255, 255, 0.16) 18%);
+            color: var(--text-primary);
+        }
+
+        .community-chat-input::placeholder {
+            color: var(--text-secondary);
         }
 
         .community-chat-actions {
@@ -1369,8 +1440,130 @@
             flex-wrap: wrap;
         }
 
+        .community-chat-action-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .community-chat-newline-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            min-width: 46px;
+            padding: 0;
+            border-radius: 999px;
+        }
+
+        .community-chat-newline-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .community-chat-schedule-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 46px;
+            height: 46px;
+            min-width: 46px;
+            padding: 0;
+            border-radius: 999px;
+        }
+
+        .community-chat-schedule-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .community-chat-schedule-summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 20px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .community-chat-schedule-summary[hidden] {
+            display: none;
+        }
+
+        .community-chat-schedule-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1600;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .community-chat-schedule-modal[hidden] {
+            display: none;
+        }
+
+        .community-chat-schedule-dialog {
+            position: relative;
+            z-index: 1;
+            width: min(440px, 100%);
+            display: grid;
+            gap: 16px;
+            padding: 20px;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(11, 18, 32, 0.92));
+            box-shadow: 0 28px 64px rgba(2, 6, 23, 0.42);
+        }
+
+        .community-chat-schedule-help {
+            margin: 0;
+            color: var(--community-menu-label-color);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .community-chat-schedule-preview {
+            display: grid;
+            gap: 6px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .community-chat-schedule-preview-label {
+            color: var(--community-menu-label-color);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .community-chat-schedule-preview-value {
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .community-chat-schedule-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .community-chat-note {
-            color: #64748b;
+            color: var(--text-secondary);
             font-size: 12px;
             line-height: 1.6;
         }
@@ -1390,7 +1583,7 @@
 
         .community-voice-layout {
             display: grid;
-            grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.95fr);
+            grid-template-columns: minmax(0, 1fr);
             gap: 18px;
             align-items: start;
         }
@@ -2322,6 +2515,18 @@
             gap: 8px;
         }
 
+        .community-voice-member {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(180deg, rgba(11, 18, 32, 0.82), rgba(15, 23, 42, 0.72));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
 
         .community-voice-member.is-speaking {
             border-color: rgba(34, 197, 94, 0.38);
@@ -2934,6 +3139,29 @@
                             <div>
                                 <h2 class="card-title" id="community-welcome-title">Rules & Regulations</h2>
                                 <p class="card-subtitle">Mandatory rules for everyone inside the FAST community workspace.</p>
+
+                    <div class="community-chat-schedule-modal" id="community-chat-schedule-modal" hidden>
+                        <div class="community-voice-screen-backdrop" data-community-chat-schedule-close></div>
+                        <div class="community-chat-schedule-dialog" role="dialog" aria-modal="true" aria-labelledby="community-chat-schedule-title">
+                            <div class="community-voice-screen-dialog-head">
+                                <h3 id="community-chat-schedule-title">Schedule Global Chat Message</h3>
+                                <p>Queue a message on the server so it still posts even if you close this page.</p>
+                            </div>
+                            <p class="community-chat-schedule-help">Scheduled Global Chat messages must be at least 1 minute in the future.</p>
+                            <div class="form-group" style="margin:0;">
+                                <label for="community-chat-schedule-datetime">Send Date &amp; Time</label>
+                                <input id="community-chat-schedule-datetime" class="form-input" type="datetime-local">
+                            </div>
+                            <div class="community-chat-schedule-preview">
+                                <span class="community-chat-schedule-preview-label">Scheduled For</span>
+                                <div id="community-chat-schedule-preview" class="community-chat-schedule-preview-value">No date selected yet.</div>
+                            </div>
+                            <div class="community-chat-schedule-actions">
+                                <button class="card-btn" type="button" id="community-chat-schedule-clear">Clear Schedule</button>
+                                <button class="card-btn active" type="button" id="community-chat-schedule-confirm">Schedule Message</button>
+                            </div>
+                        </div>
+                    </div>
                             </div>
                         </div>
                         <div class="community-panel-grid">
@@ -3016,11 +3244,32 @@
                             <form class="community-chat-composer" id="community-global-chat-form">
                                 <div class="form-group" style="margin:0;">
                                     <label for="community-global-chat-input">Message # global-chat</label>
-                                    <textarea id="community-global-chat-input" class="form-input community-chat-input" placeholder="Message the full community hereâ€¦"></textarea>
+                                    <textarea id="community-global-chat-input" class="form-input community-chat-input" placeholder="Message the community"></textarea>
                                 </div>
                                 <div class="community-chat-actions">
-                                    <span class="community-chat-note">This room works like a shared Discord-style channel for all signed-in users.</span>
-                                    <button class="card-btn active" type="submit" id="community-global-chat-send">Send Message</button>
+                                    <div class="community-chat-schedule-summary" id="community-global-chat-schedule-summary" hidden></div>
+                                    <div class="community-chat-action-group">
+                                        <button class="card-btn community-chat-newline-btn" type="button" id="community-global-chat-newline" aria-label="Insert line break" title="Insert line break">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M4 6h9"></path>
+                                                <path d="M4 10h9"></path>
+                                                <path d="M4 14h7"></path>
+                                                <path d="M14 14h5v4"></path>
+                                                <path d="M19 18l-4-4"></path>
+                                            </svg>
+                                        </button>
+                                        <button class="card-btn community-chat-schedule-btn" type="button" id="community-global-chat-schedule" aria-label="Schedule message" title="Schedule message">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                <path d="M8 2v4"></path>
+                                                <path d="M16 2v4"></path>
+                                                <rect x="3" y="4" width="18" height="18" rx="3"></rect>
+                                                <path d="M3 10h18"></path>
+                                                <path d="M12 14v4"></path>
+                                                <path d="M12 14h3"></path>
+                                            </svg>
+                                        </button>
+                                        <button class="card-btn active" type="submit" id="community-global-chat-send">Send Message</button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -3070,16 +3319,6 @@
                                     <div class="community-voice-stage-frame" id="community-voice-stage-frame" hidden>
                                         <div class="community-voice-stage-media" id="community-voice-stage-media" hidden></div>
                                         <div class="community-voice-stage-empty" id="community-voice-stage-empty"></div>
-                                    </div>
-                                </div>
-                                <div class="community-voice-stage-side">
-                                    <span class="community-voice-room-badge" id="community-voice-room-badge" hidden>Selected Voice Channel</span>
-                                    <p id="community-voice-room-copy" hidden></p>
-                                    <div class="community-voice-status" id="community-voice-status" hidden></div>
-                                    <p class="community-voice-meta" id="community-voice-meta" hidden></p>
-                                    <div class="community-voice-actions" hidden>
-                                        <button class="card-btn community-voice-link primary" type="button" id="community-voice-join-btn" hidden>Join Meeting Room 1</button>
-                                        <button class="card-btn community-voice-link secondary" type="button" id="community-voice-leave-btn" hidden>Leave Voice Channel</button>
                                     </div>
                                 </div>
                             </div>
@@ -3491,6 +3730,7 @@
             const GLOBAL_CHAT_CHANNEL = 'global-chat';
             const GLOBAL_CHAT_POLL_MS = 3000;
             const VOICE_SIGNAL_POLL_MS = 1200;
+            const VOICE_PRESENCE_POLL_MS = 3000;
             const VOICE_STORAGE_KEY = 'fastCommunityVoiceClientId';
             const VOICE_ICE_SERVERS = [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -3529,6 +3769,7 @@
             const VOICE_SESSION_COMMAND_KEY = 'fastCommunityVoiceSessionCommand';
             const VOICE_SESSION_CHANNEL = 'fast-community-voice-session';
             const VOICE_CONTROLLER_WINDOW_NAME = 'fastCommunityVoiceController';
+            const VOICE_SESSION_STATE_VERSION = '2026-06-01-community-voice-ui';
             const VOICE_SESSION_STATE_STALE_MS = 30000;
             const VOICE_INPUT_DEVICE_KEY = 'fastCommunityVoiceInputDeviceId';
             const VOICE_MIC_GAIN_DB_KEY = 'fastCommunityVoiceMicGainDb';
@@ -3545,10 +3786,13 @@
             let selectedVoiceRoomId = 'meeting-room';
             let activeVoiceRoomId = '';
             let globalChatMessages = [];
+            let globalChatScheduledMessages = [];
             let globalChatEditingMessageId = 0;
             let globalChatEditingDraft = '';
             let globalChatPendingMessageId = 0;
+            let globalChatPendingScheduledId = 0;
             let globalChatPendingAction = '';
+            let globalChatPendingScheduleAt = '';
             let globalChatPollTimer = 0;
             let globalChatLoadPromise = null;
             let voiceClientId = '';
@@ -3558,6 +3802,7 @@
             let voiceJoining = false;
             let voiceJoined = false;
             let voiceLastError = '';
+            let voicePresenceByRoom = {};
             let voiceInviteButtonResetHandle = 0;
             let voiceSpeakingMonitorHandle = 0;
             let voiceAudioContext = null;
@@ -3587,12 +3832,21 @@
             let voiceDeviceChangePending = false;
             let voiceStageExpandedShareKey = '';
             let voiceStageRenderSignature = '';
+            let voicePresencePollHandle = 0;
+            let voiceJoinSoundPrimed = false;
+            let voiceJoinClickSoundPending = false;
+            let voiceLocalSessionLockUntil = 0;
+            let voiceSoundEffectsUnlocked = false;
             const voiceSpeakingState = new Map();
             const voiceLocallyMutedParticipants = new Set();
             const voicePeerConnections = new Map();
             const voiceRemoteAudioByParticipant = new Map();
             const voiceRemoteVideoByParticipant = new Map();
             const voiceRemoteAudioMeters = new Map();
+            const voiceJoinSound = new Audio('Sound FX/Join Sound FX - Discord.mp3');
+            const voiceLeaveSound = new Audio('Sound FX/Leave Sound FX - Discord.mp3');
+            voiceJoinSound.preload = 'auto';
+            voiceLeaveSound.preload = 'auto';
 
             if (!buttons.length || !panels.length) {
                 return;
@@ -3601,7 +3855,24 @@
             const getVoiceRoom = (roomId) => VOICE_ROOMS[String(roomId || '').trim()] || VOICE_ROOMS['meeting-room'];
             const getSelectedVoiceRoom = () => getVoiceRoom(selectedVoiceRoomId);
             const getActiveVoiceRoom = () => getVoiceRoom(activeVoiceRoomId || selectedVoiceRoomId);
-            const shouldShowVoiceRoster = () => Boolean(voiceChannelInteracted || voiceJoined || voiceJoining);
+            const lockLocalVoiceSessionState = (durationMs = 12000) => {
+                voiceLocalSessionLockUntil = Date.now() + Math.max(0, Number(durationMs) || 0);
+            };
+            const hasLockedLocalVoiceSessionState = () => Boolean(
+                !isVoiceControllerPopup
+                && (
+                    voiceJoined
+                    || voiceJoining
+                    || Boolean(voiceParticipantId)
+                    || Date.now() < voiceLocalSessionLockUntil
+                )
+            );
+            const getPublicVoiceParticipantsForRoom = (roomId) => {
+                const room = getVoiceRoom(roomId);
+                const entry = voicePresenceByRoom[room.backendRoom];
+                return entry && Array.isArray(entry.participants) ? entry.participants : [];
+            };
+            const shouldShowVoiceRoster = () => Boolean(activePanelId === VOICE_PANEL || voiceChannelInteracted || voiceJoined || voiceJoining || getPublicVoiceParticipantsForRoom(selectedVoiceRoomId).length);
             const supportsVoiceScreenShare = () => Boolean(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
             const supportsVoiceOutputSelection = () => Boolean(typeof HTMLMediaElement !== 'undefined' && HTMLMediaElement.prototype && typeof HTMLMediaElement.prototype.setSinkId === 'function');
             const escapeVoiceStageSelectorValue = (value) => {
@@ -3712,6 +3983,118 @@
 
                 applyRemoteAudioMuteState(participantId);
                 renderVoiceRoster();
+            };
+
+            const normalizeVoiceParticipantList = (participants) => Array.isArray(participants) ? participants : [];
+
+            const playVoiceJoinSound = () => {
+                if (!voiceJoinSound) {
+                    return;
+                }
+
+                try {
+                    voiceJoinSound.currentTime = 0;
+                } catch (error) {
+                    // Ignore seek failures before replay.
+                }
+
+                void voiceJoinSound.play().catch(() => {
+                    // Ignore autoplay or device playback failures.
+                });
+            };
+
+            const unlockVoiceSoundEffects = () => {
+                ensureVoiceAudioContext();
+                if (voiceSoundEffectsUnlocked) {
+                    return;
+                }
+
+                voiceSoundEffectsUnlocked = true;
+                [voiceJoinSound, voiceLeaveSound].forEach((audio) => {
+                    if (!audio) {
+                        return;
+                    }
+
+                    const originalMuted = audio.muted;
+                    const originalVolume = audio.volume;
+                    audio.muted = true;
+                    audio.volume = 0;
+
+                    const restoreAudioState = () => {
+                        audio.pause();
+                        try {
+                            audio.currentTime = 0;
+                        } catch (error) {
+                            // Ignore seek failures during sound effect priming.
+                        }
+                        audio.muted = originalMuted;
+                        audio.volume = originalVolume;
+                    };
+
+                    const playAttempt = audio.play();
+                    if (playAttempt && typeof playAttempt.then === 'function') {
+                        playAttempt.then(() => {
+                            restoreAudioState();
+                        }).catch(() => {
+                            audio.muted = originalMuted;
+                            audio.volume = originalVolume;
+                        });
+                        return;
+                    }
+
+                    restoreAudioState();
+                });
+            };
+
+            const playVoiceLeaveSound = () => {
+                if (!voiceLeaveSound) {
+                    return;
+                }
+
+                try {
+                    voiceLeaveSound.currentTime = 0;
+                } catch (error) {
+                    // Ignore seek failures before replay.
+                }
+
+                void voiceLeaveSound.play().catch(() => {
+                    // Ignore autoplay or device playback failures.
+                });
+            };
+
+            const updateVoiceParticipantsState = (participants, { playJoinSound = false, playLeaveSound = false } = {}) => {
+                const normalizedParticipants = normalizeVoiceParticipantList(participants);
+                const previousIds = new Set(voiceParticipants.map((participant) => String(participant && participant.id || '').trim()).filter(Boolean));
+                const nextIds = new Set(normalizedParticipants.map((participant) => String(participant && participant.id || '').trim()).filter(Boolean));
+                const addedParticipantIds = Array.from(nextIds).filter((participantId) => participantId && !previousIds.has(participantId) && participantId !== voiceParticipantId);
+                const removedParticipantIds = Array.from(previousIds).filter((participantId) => participantId && !nextIds.has(participantId) && participantId !== voiceParticipantId);
+
+                voiceParticipants = normalizedParticipants;
+
+                if (!voiceJoinSoundPrimed) {
+                    voiceJoinSoundPrimed = true;
+                    return {
+                        participantsChanged: previousIds.size !== nextIds.size || addedParticipantIds.length > 0 || removedParticipantIds.length > 0,
+                        addedParticipantIds,
+                        removedParticipantIds,
+                        nextIds
+                    };
+                }
+
+                if (playJoinSound && addedParticipantIds.length) {
+                    playVoiceJoinSound();
+                }
+
+                if (playLeaveSound && removedParticipantIds.length) {
+                    playVoiceLeaveSound();
+                }
+
+                return {
+                    participantsChanged: previousIds.size !== nextIds.size || normalizedParticipants.some((participant) => !previousIds.has(String(participant && participant.id || '').trim())),
+                    addedParticipantIds,
+                    removedParticipantIds,
+                    nextIds
+                };
             };
 
             const getLiveScreenStream = (stream) => {
@@ -3894,6 +4277,11 @@
                     video.playsInline = true;
                     video.muted = true;
                     video.srcObject = share.stream;
+                    video.addEventListener('loadedmetadata', () => {
+                        void video.play().catch(() => {
+                            // Ignore autoplay or playback failures for preview tiles.
+                        });
+                    }, { once: true });
 
                     const label = document.createElement('div');
                     label.className = 'community-voice-stage-preview-label';
@@ -4066,6 +4454,11 @@
                     video.playsInline = true;
                     video.muted = true;
                     video.srcObject = share.stream;
+                    video.addEventListener('loadedmetadata', () => {
+                        void video.play().catch(() => {
+                            // Ignore autoplay or playback failures for shared media tiles.
+                        });
+                    }, { once: true });
 
                     const previewStrip = document.createElement('div');
                     previewStrip.className = 'community-voice-stage-preview-strip';
@@ -4196,8 +4589,8 @@
             };
 
             const renderVoiceToolbar = () => {
-                const isVisible = shouldShowVoiceRoster();
-                const shouldShowHangup = shouldShowVoiceRoster();
+                const isVisible = Boolean(voiceJoined);
+                const shouldShowHangup = Boolean(voiceJoined);
                 if (voiceToolbox) {
                     voiceToolbox.hidden = !isVisible;
                 }
@@ -4260,8 +4653,13 @@
             };
 
             const hangupVoiceLounge = async () => {
+                const shouldPlayLeaveSound = Boolean(voiceParticipantId);
+                unlockVoiceSoundEffects();
+                if (shouldPlayLeaveSound) {
+                    playVoiceLeaveSound();
+                }
                 voiceChannelInteracted = false;
-                await leaveVoiceLounge();
+                await leaveVoiceLounge({ soundAlreadyPlayed: shouldPlayLeaveSound });
             };
 
             const closeVoiceScreenShareModal = () => {
@@ -4644,8 +5042,17 @@
             const globalChatStatus = document.getElementById('community-global-chat-status');
             const globalChatForm = document.getElementById('community-global-chat-form');
             const globalChatInput = document.getElementById('community-global-chat-input');
+            const globalChatNewlineButton = document.getElementById('community-global-chat-newline');
+            const globalChatScheduleButton = document.getElementById('community-global-chat-schedule');
             const globalChatSendButton = document.getElementById('community-global-chat-send');
             const globalChatCount = document.getElementById('community-global-chat-count');
+            const globalChatScheduleSummary = document.getElementById('community-global-chat-schedule-summary');
+            const globalChatScheduleModal = document.getElementById('community-chat-schedule-modal');
+            const globalChatScheduleInput = document.getElementById('community-chat-schedule-datetime');
+            const globalChatSchedulePreview = document.getElementById('community-chat-schedule-preview');
+            const globalChatScheduleConfirmButton = document.getElementById('community-chat-schedule-confirm');
+            const globalChatScheduleClearButton = document.getElementById('community-chat-schedule-clear');
+            const globalChatScheduleCloseButtons = document.querySelectorAll('[data-community-chat-schedule-close]');
 
             const getCommunityAuthToken = () => String((window.getAuthToken && window.getAuthToken()) || localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '').trim();
             const getCommunityCurrentUser = () => {
@@ -4681,10 +5088,68 @@
                 });
             };
 
+            const formatGlobalChatScheduledAt = (value) => {
+                const parsed = value ? new Date(value) : null;
+                if (!parsed || Number.isNaN(parsed.getTime())) {
+                    return 'No date selected yet.';
+                }
+
+                return parsed.toLocaleString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            };
+
+            const toGlobalChatDateTimeLocalValue = (value) => {
+                const parsed = value ? new Date(value) : null;
+                if (!parsed || Number.isNaN(parsed.getTime())) {
+                    return '';
+                }
+
+                const offsetMs = parsed.getTimezoneOffset() * 60000;
+                return new Date(parsed.getTime() - offsetMs).toISOString().slice(0, 16);
+            };
+
+            const getDefaultGlobalChatScheduleLocalValue = () => {
+                const now = new Date();
+                now.setSeconds(0, 0);
+                now.setMinutes(now.getMinutes() + 5);
+                return toGlobalChatDateTimeLocalValue(now.toISOString());
+            };
+
             const createGlobalChatIcon = (kind) => {
                 const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                 icon.setAttribute('viewBox', '0 0 24 24');
                 icon.setAttribute('aria-hidden', 'true');
+
+                if (kind === 'schedule') {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', 'M8 2v4');
+                    const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path2.setAttribute('d', 'M16 2v4');
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', '3');
+                    rect.setAttribute('y', '4');
+                    rect.setAttribute('width', '18');
+                    rect.setAttribute('height', '18');
+                    rect.setAttribute('rx', '3');
+                    const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path3.setAttribute('d', 'M3 10h18');
+                    const path4 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path4.setAttribute('d', 'M12 14v4');
+                    const path5 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path5.setAttribute('d', 'M12 14h3');
+                    icon.appendChild(path);
+                    icon.appendChild(path2);
+                    icon.appendChild(rect);
+                    icon.appendChild(path3);
+                    icon.appendChild(path4);
+                    icon.appendChild(path5);
+                    return icon;
+                }
 
                 if (kind === 'edit') {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -4733,6 +5198,77 @@
                 globalChatPendingMessageId = 0;
                 globalChatPendingAction = '';
                 renderGlobalChatMessages();
+            };
+
+            const updateGlobalChatSchedulePreview = (value) => {
+                if (!globalChatSchedulePreview) {
+                    return;
+                }
+
+                globalChatSchedulePreview.textContent = value
+                    ? formatGlobalChatScheduledAt(value)
+                    : 'No date selected yet.';
+            };
+
+            const setPendingGlobalChatScheduleAt = (value) => {
+                const nextValue = value ? new Date(value) : null;
+                globalChatPendingScheduleAt = nextValue && !Number.isNaN(nextValue.getTime())
+                    ? nextValue.toISOString()
+                    : '';
+
+                if (globalChatScheduleSummary) {
+                    if (!globalChatPendingScheduleAt) {
+                        globalChatScheduleSummary.textContent = '';
+                        globalChatScheduleSummary.setAttribute('hidden', 'hidden');
+                    } else {
+                        globalChatScheduleSummary.textContent = `Scheduled for ${formatGlobalChatScheduledAt(globalChatPendingScheduleAt)}`;
+                        globalChatScheduleSummary.removeAttribute('hidden');
+                    }
+                }
+
+                if (globalChatScheduleInput) {
+                    globalChatScheduleInput.value = globalChatPendingScheduleAt
+                        ? toGlobalChatDateTimeLocalValue(globalChatPendingScheduleAt)
+                        : '';
+                }
+
+                updateGlobalChatSchedulePreview(globalChatPendingScheduleAt);
+            };
+
+            const openGlobalChatScheduleModal = () => {
+                if (!globalChatScheduleModal) {
+                    return;
+                }
+
+                if (globalChatScheduleInput) {
+                    globalChatScheduleInput.value = globalChatPendingScheduleAt
+                        ? toGlobalChatDateTimeLocalValue(globalChatPendingScheduleAt)
+                        : getDefaultGlobalChatScheduleLocalValue();
+                }
+
+                updateGlobalChatSchedulePreview(
+                    globalChatScheduleInput && globalChatScheduleInput.value
+                        ? new Date(globalChatScheduleInput.value).toISOString()
+                        : globalChatPendingScheduleAt
+                );
+
+                globalChatScheduleModal.hidden = false;
+                window.requestAnimationFrame(() => {
+                    if (globalChatScheduleInput) {
+                        globalChatScheduleInput.focus();
+                        if (typeof globalChatScheduleInput.showPicker === 'function') {
+                            try {
+                                globalChatScheduleInput.showPicker();
+                            } catch (_error) {}
+                        }
+                    }
+                });
+            };
+
+            const closeGlobalChatScheduleModal = () => {
+                if (globalChatScheduleModal) {
+                    globalChatScheduleModal.hidden = true;
+                }
             };
 
             const saveGlobalChatEdit = async (messageId) => {
@@ -4837,6 +5373,51 @@
                 }
             };
 
+            const deleteGlobalChatScheduledMessage = async (scheduleId) => {
+                const normalizedScheduleId = Number(scheduleId) || 0;
+                if (!normalizedScheduleId || !globalChatStatus) {
+                    return;
+                }
+
+                const token = getCommunityAuthToken();
+                if (!token) {
+                    globalChatStatus.textContent = 'Sign in again before deleting a scheduled message.';
+                    return;
+                }
+
+                if (!window.confirm('Delete this scheduled message from # global-chat?')) {
+                    return;
+                }
+
+                globalChatPendingScheduledId = normalizedScheduleId;
+                globalChatPendingAction = 'delete-scheduled';
+                globalChatStatus.textContent = 'Deleting scheduled messageâ€¦';
+                renderGlobalChatMessages();
+
+                try {
+                    const response = await fetch(`/api/community/scheduled-messages/${encodeURIComponent(String(normalizedScheduleId))}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Unable to delete the scheduled message.');
+                    }
+
+                    globalChatPendingScheduledId = 0;
+                    globalChatPendingAction = '';
+                    await loadGlobalChatMessages(true);
+                    globalChatStatus.textContent = 'Scheduled message removed from # global-chat.';
+                } catch (error) {
+                    globalChatPendingScheduledId = 0;
+                    globalChatPendingAction = '';
+                    globalChatStatus.textContent = String(error.message || 'Unable to delete the scheduled message.');
+                    renderGlobalChatMessages();
+                }
+            };
+
             const renderGlobalChatMessages = () => {
                 if (!globalChatStream || !globalChatStatus) {
                     return;
@@ -4844,14 +5425,16 @@
 
                 const currentUser = getCommunityCurrentUser();
                 const messages = Array.isArray(globalChatMessages) ? globalChatMessages : [];
+                const scheduledMessages = Array.isArray(globalChatScheduledMessages) ? globalChatScheduledMessages : [];
+                const visibleEntryCount = messages.length + scheduledMessages.length;
 
                 if (globalChatCount) {
-                    globalChatCount.textContent = String(messages.length);
+                    globalChatCount.textContent = String(visibleEntryCount);
                 }
 
                 globalChatStream.replaceChildren();
 
-                if (!messages.length) {
+                if (!visibleEntryCount) {
                     if (globalChatEmpty) {
                         globalChatEmpty.hidden = false;
                         globalChatStream.appendChild(globalChatEmpty);
@@ -4895,7 +5478,7 @@
                         metaBits.push('edited');
                         meta.classList.add('community-chat-meta-edited');
                     }
-                    meta.textContent = metaBits.join(' â€¢ ');
+                    meta.textContent = metaBits.join(' • ');
 
                     head.appendChild(avatar);
                     head.appendChild(author);
@@ -4991,7 +5574,66 @@
                     globalChatStream.appendChild(messageCard);
                 });
 
-                globalChatStatus.textContent = `${messages.length} message${messages.length === 1 ? '' : 's'} in # global-chat.`;
+                scheduledMessages.forEach((entry) => {
+                    const messageCard = document.createElement('article');
+                    const isPendingDelete = globalChatPendingScheduledId === Number(entry.id);
+                    messageCard.className = 'community-chat-message is-own is-scheduled-pending';
+
+                    const head = document.createElement('div');
+                    head.className = 'community-chat-message-head';
+
+                    const avatar = document.createElement('span');
+                    avatar.className = 'community-chat-avatar';
+                    avatar.textContent = String(entry.userName || 'U').trim().charAt(0).toUpperCase() || 'U';
+
+                    const author = document.createElement('strong');
+                    author.className = 'community-chat-author';
+                    author.textContent = String(entry.userName || 'FAST User').trim() || 'FAST User';
+
+                    const meta = document.createElement('span');
+                    meta.className = 'community-chat-meta';
+                    meta.textContent = `${String(entry.userRole || 'user').trim() || 'user'} • queued`;
+
+                    const pill = document.createElement('span');
+                    pill.className = 'community-chat-scheduled-pill';
+                    pill.appendChild(createGlobalChatIcon('schedule'));
+                    pill.appendChild(document.createTextNode(`Scheduled for ${formatGlobalChatScheduledAt(entry.scheduledFor)}`));
+
+                    const actions = document.createElement('div');
+                    actions.className = 'community-chat-message-actions';
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'community-chat-icon-btn is-danger';
+                    deleteButton.setAttribute('aria-label', 'Delete your scheduled message');
+                    deleteButton.title = 'Delete scheduled message';
+                    deleteButton.disabled = isPendingDelete;
+                    deleteButton.appendChild(createGlobalChatIcon('delete'));
+                    deleteButton.addEventListener('click', () => {
+                        void deleteGlobalChatScheduledMessage(entry.id);
+                    });
+
+                    actions.appendChild(deleteButton);
+                    head.appendChild(avatar);
+                    head.appendChild(author);
+                    head.appendChild(meta);
+                    head.appendChild(pill);
+                    head.appendChild(actions);
+
+                    const body = document.createElement('p');
+                    body.className = 'community-chat-body';
+                    body.textContent = String(entry.message || '').trim();
+
+                    messageCard.appendChild(head);
+                    messageCard.appendChild(body);
+                    globalChatStream.appendChild(messageCard);
+                });
+
+                if (scheduledMessages.length) {
+                    globalChatStatus.textContent = `${messages.length} live message${messages.length === 1 ? '' : 's'} and ${scheduledMessages.length} scheduled in # global-chat.`;
+                } else {
+                    globalChatStatus.textContent = `${messages.length} message${messages.length === 1 ? '' : 's'} in # global-chat.`;
+                }
                 globalChatStream.scrollTop = globalChatStream.scrollHeight;
             };
 
@@ -5004,6 +5646,7 @@
                     const token = getCommunityAuthToken();
                     if (!token) {
                         globalChatMessages = [];
+                        globalChatScheduledMessages = [];
                         if (globalChatStatus) {
                             globalChatStatus.textContent = 'Sign in to view and send messages in # global-chat.';
                         }
@@ -5024,6 +5667,7 @@
                         }
 
                         globalChatMessages = Array.isArray(data.messages) ? data.messages : [];
+                        globalChatScheduledMessages = Array.isArray(data.scheduledMessages) ? data.scheduledMessages : [];
                         renderGlobalChatMessages();
                         return globalChatMessages;
                     } catch (error) {
@@ -5040,7 +5684,7 @@
                 return globalChatLoadPromise;
             };
 
-            const sendGlobalChatMessage = async () => {
+            const sendGlobalChatMessage = async (scheduledFor = '') => {
                 if (!globalChatInput || !globalChatSendButton || !globalChatStatus) {
                     return;
                 }
@@ -5058,8 +5702,11 @@
                 }
 
                 globalChatSendButton.disabled = true;
+                if (globalChatScheduleButton) {
+                    globalChatScheduleButton.disabled = true;
+                }
                 globalChatInput.disabled = true;
-                globalChatStatus.textContent = 'Sending messageâ€¦';
+                globalChatStatus.textContent = scheduledFor ? 'Scheduling messageâ€¦' : 'Sending messageâ€¦';
 
                 try {
                     const response = await fetch('/api/community/messages', {
@@ -5070,7 +5717,8 @@
                         },
                         body: JSON.stringify({
                             channel: GLOBAL_CHAT_CHANNEL,
-                            message: messageText
+                            message: messageText,
+                            scheduledFor: scheduledFor || ''
                         })
                     });
                     const data = await response.json();
@@ -5079,21 +5727,99 @@
                     }
 
                     globalChatInput.value = '';
+                    setPendingGlobalChatScheduleAt('');
+                    closeGlobalChatScheduleModal();
                     await loadGlobalChatMessages(true);
-                    globalChatStatus.textContent = 'Message sent to # global-chat.';
+                    globalChatStatus.textContent = scheduledFor
+                        ? 'Message scheduled in # global-chat.'
+                        : 'Message sent to # global-chat.';
                 } catch (error) {
                     globalChatStatus.textContent = String(error.message || 'Unable to send the message.');
                 } finally {
                     globalChatSendButton.disabled = false;
+                    if (globalChatScheduleButton) {
+                        globalChatScheduleButton.disabled = false;
+                    }
                     globalChatInput.disabled = false;
                     globalChatInput.focus();
                 }
+            };
+
+            const insertGlobalChatLineBreak = () => {
+                if (!globalChatInput || globalChatInput.disabled) {
+                    return;
+                }
+
+                const start = Number(globalChatInput.selectionStart || 0);
+                const end = Number(globalChatInput.selectionEnd || start);
+                const currentValue = String(globalChatInput.value || '');
+                globalChatInput.value = `${currentValue.slice(0, start)}\n${currentValue.slice(end)}`;
+                globalChatInput.focus();
+                globalChatInput.setSelectionRange(start + 1, start + 1);
             };
 
             if (globalChatForm) {
                 globalChatForm.addEventListener('submit', (event) => {
                     event.preventDefault();
                     void sendGlobalChatMessage();
+                });
+            }
+
+            if (globalChatNewlineButton) {
+                globalChatNewlineButton.addEventListener('click', () => {
+                    insertGlobalChatLineBreak();
+                });
+            }
+
+            if (globalChatScheduleButton) {
+                globalChatScheduleButton.addEventListener('click', () => {
+                    openGlobalChatScheduleModal();
+                });
+            }
+
+            if (globalChatScheduleInput) {
+                globalChatScheduleInput.addEventListener('input', () => {
+                    updateGlobalChatSchedulePreview(
+                        globalChatScheduleInput.value
+                            ? new Date(globalChatScheduleInput.value).toISOString()
+                            : ''
+                    );
+                });
+            }
+
+            if (globalChatScheduleClearButton) {
+                globalChatScheduleClearButton.addEventListener('click', () => {
+                    setPendingGlobalChatScheduleAt('');
+                    closeGlobalChatScheduleModal();
+                });
+            }
+
+            if (globalChatScheduleConfirmButton) {
+                globalChatScheduleConfirmButton.addEventListener('click', () => {
+                    const nextSchedule = globalChatScheduleInput && globalChatScheduleInput.value
+                        ? new Date(globalChatScheduleInput.value).toISOString()
+                        : '';
+                    setPendingGlobalChatScheduleAt(nextSchedule);
+                    void sendGlobalChatMessage(nextSchedule);
+                });
+            }
+
+            globalChatScheduleCloseButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    closeGlobalChatScheduleModal();
+                });
+            });
+
+            if (globalChatInput) {
+                globalChatInput.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter' || event.shiftKey) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    if (!globalChatInput.disabled) {
+                        void sendGlobalChatMessage();
+                    }
                 });
             }
 
@@ -5105,12 +5831,19 @@
                 }, GLOBAL_CHAT_POLL_MS);
             }
 
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && globalChatScheduleModal && !globalChatScheduleModal.hidden) {
+                    closeGlobalChatScheduleModal();
+                }
+            });
+
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
                     void loadGlobalChatMessages(true);
                 }
             });
 
+            setPendingGlobalChatScheduleAt('');
             renderGlobalChatMessages();
             void loadGlobalChatMessages();
 
@@ -5557,6 +6290,14 @@
                 return updatedAt > 0 && (Date.now() - updatedAt) < VOICE_SESSION_STATE_STALE_MS;
             };
 
+            const isVoiceSessionStateCompatible = (state) => {
+                if (!state || typeof state !== 'object') {
+                    return false;
+                }
+
+                return String(state.sessionVersion || '').trim() === VOICE_SESSION_STATE_VERSION;
+            };
+
             const sendVoiceSessionCommand = (type, payload = {}) => {
                 const command = {
                     id: typeof crypto !== 'undefined' && crypto.randomUUID
@@ -5588,6 +6329,7 @@
                 const roomId = String((voiceJoined && activeVoiceRoomId) || selectedVoiceRoomId || '').trim();
                 const room = getVoiceRoom(roomId);
                 const state = {
+                    sessionVersion: VOICE_SESSION_STATE_VERSION,
                     controllerActive: true,
                     popup: true,
                     joined: Boolean(voiceJoined),
@@ -5597,7 +6339,8 @@
                     participants: Array.isArray(voiceParticipants)
                         ? voiceParticipants.map((participant) => ({
                             id: String(participant && participant.id || '').trim(),
-                            name: String(participant && participant.name || 'FAST User').trim() || 'FAST User'
+                            name: String(participant && participant.name || 'FAST User').trim() || 'FAST User',
+                            avatarImage: String(participant && participant.avatarImage || '').trim()
                         }))
                         : [],
                     lastError: String(voiceLastError || '').trim(),
@@ -5627,6 +6370,7 @@
                     voiceSessionChannel.postMessage({
                         type: 'state',
                         state: {
+                            sessionVersion: VOICE_SESSION_STATE_VERSION,
                             joined: false,
                             joining: false,
                             roomId: selectedVoiceRoomId,
@@ -5645,6 +6389,26 @@
                     return;
                 }
 
+                if (hasLockedLocalVoiceSessionState()) {
+                    return;
+                }
+
+                if (!isVoiceSessionStateCompatible(nextState)) {
+                    voiceJoined = false;
+                    voiceJoining = false;
+                    activeVoiceRoomId = '';
+                    updateVoiceParticipantsState([], { playJoinSound: false, playLeaveSound: false });
+                    voiceLastError = '';
+                    renderMenuState();
+                    renderVoiceState({
+                        joined: false,
+                        joining: false,
+                        lastError: '',
+                        participants: []
+                    });
+                    return;
+                }
+
                 const roomId = String(nextState.roomId || selectedVoiceRoomId || '').trim();
                 if (roomId) {
                     selectedVoiceRoomId = getVoiceRoom(roomId).id;
@@ -5653,8 +6417,11 @@
                 voiceJoined = Boolean(nextState.joined);
                 voiceJoining = Boolean(nextState.joining);
                 activeVoiceRoomId = voiceJoined ? selectedVoiceRoomId : '';
-                voiceParticipants = Array.isArray(nextState.participants) ? nextState.participants : [];
+                updateVoiceParticipantsState(nextState.participants, { playJoinSound: voiceJoined, playLeaveSound: voiceJoined });
                 voiceLastError = String(nextState.lastError || '').trim();
+                if (!voiceJoined && !voiceJoining) {
+                    voiceJoinSoundPrimed = false;
+                }
                 renderMenuState();
                 renderVoiceState({
                     joined: voiceJoined,
@@ -5745,8 +6512,27 @@
                 }
 
                 const state = readVoiceSessionState();
+                if (!isVoiceSessionStateCompatible(state)) {
+                    try {
+                        localStorage.removeItem(VOICE_SESSION_STATE_KEY);
+                    } catch (error) {
+                        // Ignore storage cleanup failures.
+                    }
+
+                    applyVoiceSessionState({
+                        sessionVersion: VOICE_SESSION_STATE_VERSION,
+                        joined: false,
+                        joining: false,
+                        roomId: selectedVoiceRoomId,
+                        participants: [],
+                        lastError: ''
+                    });
+                    return;
+                }
+
                 if (!isVoiceSessionStateFresh(state)) {
                     applyVoiceSessionState({
+                        sessionVersion: VOICE_SESSION_STATE_VERSION,
                         joined: false,
                         joining: false,
                         roomId: selectedVoiceRoomId,
@@ -6072,33 +6858,8 @@
 
             const renderSelectedVoiceRoom = () => {
                 const room = getSelectedVoiceRoom();
-                const activeRoom = getActiveVoiceRoom();
-
-                if (voiceRoomBadge) {
-                    voiceRoomBadge.textContent = voiceJoined ? `Connected To ${activeRoom.label}` : `Selected Voice Channel: ${room.label}`;
-                }
                 if (voiceRoomTitle) {
                     voiceRoomTitle.textContent = room.label;
-                }
-                if (voiceRoomCopy) {
-                    voiceRoomCopy.textContent = room.description;
-                }
-                if (voiceRoomPurpose) {
-                    voiceRoomPurpose.textContent = room.purpose;
-                }
-                if (voiceRoomCapacity) {
-                    voiceRoomCapacity.textContent = voiceJoined ? `Live in ${activeRoom.label}` : `Ready to join ${room.label}`;
-                }
-                if (voiceRoomBestFor) {
-                    voiceRoomBestFor.textContent = room.bestFor;
-                }
-                if (voiceRoomSwitching) {
-                    voiceRoomSwitching.textContent = voiceJoined
-                        ? `You are currently connected to ${activeRoom.label}. Click another voice channel to move rooms.`
-                        : 'If you click another voice channel while connected, FAST will move you into that room.';
-                }
-                if (voiceJoinButton) {
-                    voiceJoinButton.textContent = `Join ${room.label}`;
                 }
                 if (heroJoinButton) {
                     heroJoinButton.textContent = `Join ${room.label}`;
@@ -6163,6 +6924,49 @@
                 }, VOICE_SIGNAL_POLL_MS);
             };
 
+            const updateVoiceRoomPresenceMeta = () => {
+                Object.values(VOICE_ROOMS).forEach((room) => {
+                    const roomParticipants = getPublicVoiceParticipantsForRoom(room.id);
+                    const roomButton = document.querySelector(`.community-menu-btn[data-voice-room="${room.id}"]`);
+                    const roomMeta = roomButton ? roomButton.querySelector('.community-menu-btn-meta') : null;
+                    if (roomMeta) {
+                        roomMeta.textContent = String(roomParticipants.length);
+                    }
+                });
+            };
+
+            const scheduleVoicePresencePoll = () => {
+                window.clearTimeout(voicePresencePollHandle);
+                voicePresencePollHandle = window.setTimeout(() => {
+                    loadVoicePresence().catch(() => {});
+                }, VOICE_PRESENCE_POLL_MS);
+            };
+
+            const loadVoicePresence = async () => {
+                try {
+                    const data = await requestVoiceJson('/api/community/voice/presence');
+                    const nextPresence = {};
+                    (Array.isArray(data.rooms) ? data.rooms : []).forEach((roomEntry) => {
+                        const backendRoom = String(roomEntry && roomEntry.room || '').trim();
+                        if (!backendRoom) {
+                            return;
+                        }
+
+                        nextPresence[backendRoom] = {
+                            activeParticipants: Math.max(0, Number(roomEntry && roomEntry.activeParticipants) || 0),
+                            participants: Array.isArray(roomEntry && roomEntry.participants) ? roomEntry.participants : []
+                        };
+                    });
+
+                    voicePresenceByRoom = nextPresence;
+                    updateVoiceRoomPresenceMeta();
+                    renderSelectedVoiceRoom();
+                    renderVoiceRoster();
+                } finally {
+                    scheduleVoicePresencePoll();
+                }
+            };
+
             const removeRemoteAudio = (participantId) => {
                 stopRemoteAudioMeter(participantId);
                 const audio = voiceRemoteAudioByParticipant.get(participantId);
@@ -6211,28 +7015,36 @@
                 }
 
                 const room = getActiveVoiceRoom();
-                const currentUser = getCurrentUserProfile();
-                const people = [{
-                    memberId: 'self',
-                    name: currentUser.name,
-                    subtitle: '',
-                    badge: '',
-                    avatarImage: currentUser.avatarImage,
-                    linkLabel: '',
-                    linkHref: ''
-                }];
+                const selectedRoom = getSelectedVoiceRoom();
+                const publicParticipants = getPublicVoiceParticipantsForRoom(selectedRoom.id);
+                const people = [];
 
-                voiceParticipants.forEach((participant) => {
+                if (voiceJoined) {
+                    const currentUser = getCurrentUserProfile();
+                    people.push({
+                        memberId: 'self',
+                        name: currentUser.name,
+                        subtitle: '',
+                        badge: '',
+                        avatarImage: currentUser.avatarImage,
+                        linkLabel: '',
+                        linkHref: '',
+                        canToggleLocalMute: false
+                    });
+                }
+
+                const rosterParticipants = voiceJoined ? voiceParticipants : publicParticipants;
+                rosterParticipants.forEach((participant) => {
                     const participantId = String(participant.id || '').trim() || `member-${people.length + 1}`;
                     people.push({
                         memberId: participantId,
                         name: String(participant.name || 'FAST User').trim() || 'FAST User',
-                        subtitle: `In ${room.label} now`,
-                        badge: 'Live',
-                        avatarImage: '',
+                        subtitle: '',
+                        badge: '',
+                        avatarImage: String(participant.avatarImage || '').trim(),
                         linkLabel: '',
                         linkHref: '',
-                        canToggleLocalMute: true,
+                        canToggleLocalMute: false,
                         locallyMuted: isVoiceParticipantLocallyMuted(participantId)
                     });
                 });
@@ -6244,20 +7056,7 @@
             };
 
             const renderVoiceState = (state) => {
-                if (!voiceStatus || !voiceMeta || !voiceJoinButton || !voiceLeaveButton) {
-                    return;
-                }
-
                 const detail = state && typeof state === 'object' ? state : {};
-                const lastError = String(detail.lastError || '').trim();
-                const joining = Boolean(detail.joining);
-                const joined = Boolean(detail.joined);
-                const participants = Array.isArray(detail.participants) ? detail.participants : voiceParticipants;
-                const participantCount = participants.length + (joined ? 1 : 0);
-                const selectedRoom = getSelectedVoiceRoom();
-                const activeRoom = getActiveVoiceRoom();
-
-                voiceStatus.classList.remove('is-connected', 'is-error');
                 renderSelectedVoiceRoom();
                 if (voiceRoster) {
                     voiceRoster.hidden = !shouldShowVoiceRoster();
@@ -6268,37 +7067,6 @@
                 if (isVoiceControllerPopup) {
                     publishVoiceSessionState();
                 }
-
-                if (joining) {
-                    voiceStatus.textContent = `Joining ${selectedRoom.label}`;
-                    voiceMeta.textContent = '';
-                    voiceJoinButton.disabled = true;
-                    voiceLeaveButton.disabled = false;
-                    return;
-                }
-
-                if (joined) {
-                    voiceStatus.textContent = `Joined ${activeRoom.label}`;
-                    voiceStatus.classList.add('is-connected');
-                    voiceMeta.textContent = '';
-                    voiceJoinButton.disabled = true;
-                    voiceLeaveButton.disabled = false;
-                    return;
-                }
-
-                if (lastError) {
-                    voiceStatus.textContent = 'Voice unavailable';
-                    voiceStatus.classList.add('is-error');
-                    voiceMeta.textContent = '';
-                    voiceJoinButton.disabled = false;
-                    voiceLeaveButton.disabled = true;
-                    return;
-                }
-
-                voiceStatus.textContent = selectedRoom.label;
-                voiceMeta.textContent = '';
-                voiceJoinButton.disabled = false;
-                voiceLeaveButton.disabled = true;
             };
 
             const findParticipant = (participantId) => voiceParticipants.find((entry) => entry.id === participantId) || null;
@@ -6358,6 +7126,9 @@
 
                 applyRemoteAudioMuteState(participantId);
                 applyVoiceOutputDeviceToAudioElement(audio).catch(() => {});
+                void audio.play().catch(() => {
+                    // Ignore autoplay or device playback failures.
+                });
 
                 if (stream.getAudioTracks().length) {
                     stopRemoteAudioMeter(participantId);
@@ -6511,11 +7282,8 @@
             };
 
             const syncVoiceParticipants = async (participants) => {
-                const normalizedParticipants = Array.isArray(participants) ? participants : [];
-                const previousIds = new Set(voiceParticipants.map((participant) => participant.id));
-                const nextIds = new Set(normalizedParticipants.map((participant) => participant.id));
-                const participantsChanged = previousIds.size !== nextIds.size
-                    || normalizedParticipants.some((participant) => !previousIds.has(participant.id));
+                const normalizedParticipants = normalizeVoiceParticipantList(participants);
+                const { participantsChanged, nextIds } = updateVoiceParticipantsState(normalizedParticipants, { playJoinSound: voiceJoined, playLeaveSound: voiceJoined });
 
                 Array.from(voicePeerConnections.keys()).forEach((participantId) => {
                     if (!nextIds.has(participantId)) {
@@ -6523,7 +7291,6 @@
                     }
                 });
 
-                voiceParticipants = normalizedParticipants;
                 renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
 
                 for (const participant of normalizedParticipants) {
@@ -6585,18 +7352,22 @@
                 }
             };
 
-            const leaveVoiceLounge = async ({ skipRequest = false } = {}) => {
+            const leaveVoiceLounge = async ({ skipRequest = false, soundAlreadyPlayed = false, suppressRender = false } = {}) => {
                 window.clearTimeout(voicePollHandle);
                 voicePollHandle = 0;
                 stopVoiceSpeakingMonitor();
 
                 const activeParticipantId = voiceParticipantId;
+                const shouldPlayLeaveSound = Boolean(activeParticipantId);
                 const activeRoom = getActiveVoiceRoom();
+                const activeBackendRoom = String(activeRoom && activeRoom.backendRoom || '').trim();
+                voiceLocalSessionLockUntil = 0;
                 voiceParticipantId = '';
                 voiceJoined = false;
                 voiceJoining = false;
                 voiceLastSignalId = 0;
                 voiceParticipants = [];
+                voiceJoinSoundPrimed = false;
                 voiceLastError = '';
                 activeVoiceRoomId = '';
                 voiceMuted = false;
@@ -6629,8 +7400,28 @@
                     }
                 }
 
+                if (activeBackendRoom && voicePresenceByRoom[activeBackendRoom]) {
+                    const nextRoomPresence = {
+                        ...voicePresenceByRoom[activeBackendRoom],
+                        participants: (Array.isArray(voicePresenceByRoom[activeBackendRoom].participants)
+                            ? voicePresenceByRoom[activeBackendRoom].participants
+                            : []).filter((participant) => String(participant && participant.id || '').trim() !== activeParticipantId)
+                    };
+                    nextRoomPresence.activeParticipants = nextRoomPresence.participants.length;
+                    voicePresenceByRoom = {
+                        ...voicePresenceByRoom,
+                        [activeBackendRoom]: nextRoomPresence
+                    };
+                }
+
                 clearVoiceSessionState();
-                renderVoiceState({ joined: false, joining: false, lastError: '', participants: [] });
+                updateVoiceRoomPresenceMeta();
+                if (shouldPlayLeaveSound && !soundAlreadyPlayed) {
+                    playVoiceLeaveSound();
+                }
+                if (!suppressRender) {
+                    renderVoiceState({ joined: false, joining: false, lastError: '', participants: [] });
+                }
             };
 
             const joinVoiceLounge = async (requestedRoomId = selectedVoiceRoomId) => {
@@ -6647,6 +7438,7 @@
                 }
 
                 setActivePanel(VOICE_PANEL);
+                lockLocalVoiceSessionState();
                 voiceJoining = true;
                 voiceLastError = '';
                 renderVoiceState({ joined: false, joining: true, lastError: '', participants: voiceParticipants });
@@ -6673,14 +7465,22 @@
                     activeVoiceRoomId = room.id;
                     voiceJoined = Boolean(voiceParticipantId);
                     voiceJoining = false;
+                    lockLocalVoiceSessionState(30000);
                     voiceLastSignalId = Number(data.signalCursor) || 0;
                     voiceLastError = '';
 
                     await syncVoiceParticipants(data.participants || []);
+                    if (voiceJoined) {
+                        if (!voiceJoinClickSoundPending) {
+                            playVoiceJoinSound();
+                        }
+                        voiceJoinClickSoundPending = false;
+                    }
                     renderVoiceScreenStage();
                     renderVoiceState({ joined: voiceJoined, joining: false, lastError: '', participants: voiceParticipants });
                     scheduleVoicePoll();
                 } catch (error) {
+                    voiceJoinClickSoundPending = false;
                     voiceJoining = false;
                     voiceJoined = false;
                     activeVoiceRoomId = '';
@@ -6693,10 +7493,15 @@
             const setSelectedVoiceRoom = async (roomId) => {
                 const room = getVoiceRoom(roomId);
                 const roomChanged = room.id !== selectedVoiceRoomId;
+                const shouldPlayJoinClickSound = (!voiceJoined && !voiceJoining) || (voiceJoined && roomChanged && activeVoiceRoomId !== room.id);
                 selectedVoiceRoomId = room.id;
                 syncVoiceRoomInUrl(room.id);
                 setActivePanel(VOICE_PANEL);
-                renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
+                lockLocalVoiceSessionState();
+                if (shouldPlayJoinClickSound) {
+                    voiceJoinClickSoundPending = true;
+                    playVoiceJoinSound();
+                }
 
                 if (!voiceJoined && !voiceJoining) {
                     await joinVoiceLounge(room.id);
@@ -6704,9 +7509,12 @@
                 }
 
                 if (voiceJoined && roomChanged && activeVoiceRoomId !== room.id) {
-                    await leaveVoiceLounge();
+                    await leaveVoiceLounge({ soundAlreadyPlayed: true, suppressRender: true });
                     await joinVoiceLounge(room.id);
+                    return;
                 }
+
+                renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
             };
 
             collapseToggles.forEach((toggle) => {
@@ -6729,6 +7537,7 @@
                 button.addEventListener('click', async () => {
                     const roomId = String(button.getAttribute('data-voice-room') || '').trim();
                     if (roomId) {
+                        unlockVoiceSoundEffects();
                         voiceChannelInteracted = true;
                         await setSelectedVoiceRoom(roomId);
                         return;
@@ -6739,6 +7548,7 @@
 
             if (voiceJoinButton) {
                 voiceJoinButton.addEventListener('click', () => {
+                    unlockVoiceSoundEffects();
                     voiceChannelInteracted = true;
                     joinVoiceLounge().catch(() => {});
                 });
@@ -6746,6 +7556,7 @@
 
             if (heroJoinButton) {
                 heroJoinButton.addEventListener('click', () => {
+                    unlockVoiceSoundEffects();
                     voiceChannelInteracted = true;
                     joinVoiceLounge().catch(() => {});
                 });
@@ -7029,9 +7840,16 @@
             }
 
             renderMenuState();
-            clearVoiceSessionState();
-            renderVoiceState({ joined: false, joining: false, lastError: '', participants: [] });
+            if (isVoiceControllerPopup) {
+                clearVoiceSessionState();
+            } else {
+                syncVoiceSessionStateFromStorage();
+            }
+            renderVoiceState({ joined: voiceJoined, joining: voiceJoining, lastError: voiceLastError, participants: voiceParticipants });
             renderVoiceToolbar();
+            loadVoicePresence().catch(() => {
+                scheduleVoicePresencePoll();
+            });
         })();
     </script>
 </body>

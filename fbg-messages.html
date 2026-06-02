@@ -219,6 +219,11 @@
             flex-wrap: wrap;
         }
 
+        html[data-messages-embedded="community"] .messages-chat-panel-head-actions {
+            width: 100%;
+            justify-content: space-between;
+        }
+
         html[data-messages-embedded="community"] .messages-composer-row {
             grid-template-columns: auto minmax(0, 1fr);
             align-items: end;
@@ -235,8 +240,27 @@
         }
 
         .messages-shell {
+            --messages-surface-shell: color-mix(in srgb, var(--glass-bg) 84%, rgb(var(--accent-light-rgb) / 0.18) 16%);
+            --messages-surface-panel: color-mix(in srgb, var(--glass-bg) 90%, rgb(var(--accent-light-rgb) / 0.12) 10%);
+            --messages-surface-panel-strong: color-mix(in srgb, var(--glass-bg) 78%, rgb(var(--accent-rgb) / 0.16) 22%);
+            --messages-surface-thread: color-mix(in srgb, var(--glass-bg) 82%, rgb(var(--accent-light-rgb) / 0.14) 18%);
+            --messages-surface-control: color-mix(in srgb, var(--glass-bg) 72%, rgb(255 255 255 / 0.22) 28%);
+            --messages-surface-control-hover: color-mix(in srgb, var(--glass-bg) 62%, rgb(var(--accent-rgb) / 0.2) 38%);
+            --messages-border-soft: color-mix(in srgb, rgb(255 255 255 / 0.42) 52%, rgb(var(--accent-rgb) / 0.22) 48%);
+            --messages-shadow-soft: 0 28px 90px rgba(7, 12, 24, 0.28);
             display: grid;
             gap: 24px;
+        }
+
+        .messages-chat-shell[data-surface-mode="light"] {
+            --messages-surface-shell: rgba(247, 247, 250, 0.98);
+            --messages-surface-panel: rgba(255, 255, 255, 0.98);
+            --messages-surface-panel-strong: rgba(252, 252, 253, 0.98);
+            --messages-surface-thread: rgba(255, 255, 255, 0.98);
+            --messages-surface-control: rgba(255, 255, 255, 0.96);
+            --messages-surface-control-hover: rgba(247, 249, 252, 0.98);
+            --messages-border-soft: rgba(255, 255, 255, 0.55);
+            --messages-shadow-soft: 0 28px 90px rgba(7, 12, 24, 0.28);
         }
 
         .messages-hero {
@@ -358,9 +382,12 @@
             min-height: 680px;
             padding: 0;
             border-radius: 32px;
-            border: 1px solid rgba(255, 255, 255, 0.55);
-            background: linear-gradient(180deg, rgba(247, 247, 250, 0.98) 0%, rgba(236, 238, 243, 0.98) 100%);
-            box-shadow: 0 28px 90px rgba(7, 12, 24, 0.28);
+            border: 1px solid var(--messages-border-soft);
+            background:
+                radial-gradient(circle at top left, rgb(var(--accent-light-rgb) / 0.18), transparent 34%),
+                linear-gradient(180deg, var(--messages-surface-shell) 0%, var(--messages-surface-panel) 100%);
+            box-shadow: var(--messages-shadow-soft);
+            backdrop-filter: blur(20px);
         }
 
         .messages-chat-users,
@@ -369,15 +396,15 @@
         }
 
         .messages-chat-users {
-            border-right: 1px solid rgba(18, 28, 45, 0.08);
-            background: linear-gradient(180deg, #fcfcfd 0%, #f3f4f7 100%);
+            border-right: 1px solid color-mix(in srgb, var(--messages-border-soft) 72%, transparent 28%);
+            background: linear-gradient(180deg, var(--messages-surface-panel-strong) 0%, var(--messages-surface-panel) 100%);
         }
 
         .messages-chat-users-head,
         .messages-chat-panel-head {
             padding: 18px 20px;
-            border-bottom: 1px solid rgba(18, 28, 45, 0.08);
-            background: rgba(255, 255, 255, 0.88);
+            border-bottom: 1px solid color-mix(in srgb, var(--messages-border-soft) 76%, transparent 24%);
+            background: color-mix(in srgb, var(--messages-surface-panel-strong) 84%, rgb(255 255 255 / 0.12) 16%);
             backdrop-filter: blur(18px);
         }
 
@@ -388,8 +415,112 @@
             gap: 16px;
         }
 
+        .messages-chat-panel-head-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
         .messages-chat-panel-head-copy {
             min-width: 0;
+        }
+
+        .messages-chat-surface-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--messages-border-soft) 82%, transparent 18%);
+            background: color-mix(in srgb, var(--messages-surface-control) 88%, rgb(255 255 255 / 0.08) 12%);
+            box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+        }
+
+        .messages-chat-surface-toggle-copy {
+            display: grid;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .messages-chat-surface-toggle-label,
+        .messages-chat-surface-toggle-value {
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .messages-chat-surface-toggle-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .messages-chat-surface-toggle-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+
+        .messages-chat-surface-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            flex: 0 0 auto;
+            width: 58px;
+            height: 32px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .messages-chat-surface-switch input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .messages-chat-surface-switch-track {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.9), rgb(var(--accent-light-rgb) / 0.92));
+            box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 12px 24px -18px rgb(var(--accent-rgb) / 0.72);
+            transition: background 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .messages-chat-surface-switch-track::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            background: #ffffff;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .messages-chat-surface-switch input:not(:checked) + .messages-chat-surface-switch-track {
+            background: linear-gradient(135deg, rgba(203, 213, 225, 0.92), rgba(148, 163, 184, 0.96));
+            box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 10px 22px -18px rgba(15, 23, 42, 0.34);
+        }
+
+        .messages-chat-surface-switch input:checked + .messages-chat-surface-switch-track::after {
+            transform: translateX(26px);
+        }
+
+        .messages-chat-surface-switch input:focus-visible + .messages-chat-surface-switch-track {
+            outline: 2px solid rgb(var(--accent-rgb) / 0.46);
+            outline-offset: 2px;
         }
 
         .messages-chat-clear {
@@ -399,7 +530,7 @@
 
         .messages-chat-users-head .card-title,
         .messages-chat-panel-head .card-title {
-            color: #111827;
+            color: var(--text-primary);
             font-size: 20px;
             font-weight: 700;
             letter-spacing: -0.02em;
@@ -408,7 +539,7 @@
         .messages-chat-users-head p,
         .messages-chat-panel-head p {
             margin: 4px 0 0;
-            color: #6b7280;
+            color: var(--text-secondary);
             line-height: 1.5;
         }
 
@@ -429,10 +560,10 @@
             text-align: left;
             padding: 14px 18px;
             border: 0;
-            border-bottom: 1px solid rgba(18, 28, 45, 0.06);
+            border-bottom: 1px solid color-mix(in srgb, var(--messages-border-soft) 54%, transparent 46%);
             border-radius: 0;
             background: transparent;
-            color: #111827;
+            color: var(--text-primary);
             transition: background 0.18s ease;
         }
 
@@ -440,8 +571,8 @@
         .messages-chat-user-btn:focus-visible,
         .messages-chat-user-btn.active {
             transform: none;
-            border-color: rgba(18, 28, 45, 0.06);
-            background: rgba(0, 122, 255, 0.08);
+            border-color: color-mix(in srgb, var(--messages-border-soft) 56%, transparent 44%);
+            background: color-mix(in srgb, rgb(var(--accent-rgb) / 0.18) 60%, var(--messages-surface-control) 40%);
             outline: none;
         }
 
@@ -452,7 +583,7 @@
             align-items: center;
             justify-content: center;
             border-radius: 999px;
-            background: linear-gradient(180deg, #d1d5db 0%, #9ca3af 100%);
+            background: linear-gradient(180deg, rgb(var(--accent-light-rgb) / 0.9) 0%, rgb(var(--accent-rgb) / 0.86) 100%);
             color: #ffffff;
             font-size: 14px;
             font-weight: 700;
@@ -476,7 +607,7 @@
 
         .messages-chat-user-name {
             font-weight: 600;
-            color: #111827;
+            color: var(--text-primary);
         }
 
         .messages-chat-user-email,
@@ -485,7 +616,7 @@
         .messages-chat-role,
         .messages-chat-empty,
         .messages-chat-placeholder {
-            color: #6b7280;
+            color: var(--text-secondary);
         }
 
         .messages-chat-user-email,
@@ -511,7 +642,7 @@
             align-items: center;
             justify-content: center;
             border-radius: 999px;
-            background: #007aff;
+            background: linear-gradient(180deg, rgb(var(--accent-light-rgb) / 0.98) 0%, rgb(var(--accent-rgb) / 0.94) 100%);
             color: #ffffff;
             font-size: 12px;
             font-weight: 700;
@@ -521,7 +652,9 @@
             display: grid;
             grid-template-rows: auto minmax(0, 1fr) auto;
             min-height: 680px;
-            background: linear-gradient(180deg, #f5f5f7 0%, #ffffff 30%, #ffffff 100%);
+            background:
+                radial-gradient(circle at top right, rgb(var(--accent-light-rgb) / 0.14), transparent 28%),
+                linear-gradient(180deg, var(--messages-surface-panel) 0%, var(--messages-surface-thread) 36%, var(--messages-surface-panel) 100%);
         }
 
         .messages-chat-thread {
@@ -532,8 +665,8 @@
             overflow-y: auto;
             max-height: 500px;
             background:
-                radial-gradient(circle at top, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 34%),
-                linear-gradient(180deg, #f4f5f7 0%, #ffffff 100%);
+                radial-gradient(circle at top, rgb(var(--accent-light-rgb) / 0.16), transparent 34%),
+                linear-gradient(180deg, var(--messages-surface-thread) 0%, color-mix(in srgb, var(--messages-surface-panel) 76%, transparent 24%) 100%);
         }
 
         .messages-chat-bubble {
@@ -714,8 +847,8 @@
             width: 30px;
             height: 30px;
             padding: 0;
-            background: rgba(255, 255, 255, 0.96);
-            color: #111827;
+            background: color-mix(in srgb, var(--messages-surface-control) 88%, rgb(255 255 255 / 0.12) 12%);
+            color: var(--text-primary);
             font-size: 15px;
             line-height: 1;
             box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
@@ -726,8 +859,8 @@
         }
 
         .messages-chat-bubble.outgoing .messages-chat-reaction-trigger {
-            background: rgba(247, 249, 252, 0.96);
-            color: #0f172a;
+            background: color-mix(in srgb, var(--messages-surface-control-hover) 82%, rgb(255 255 255 / 0.16) 18%);
+            color: var(--text-primary);
         }
 
         .messages-chat-bubble:hover .messages-chat-reaction-trigger,
@@ -747,7 +880,7 @@
             gap: 6px;
             padding: 8px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.96);
+            background: color-mix(in srgb, var(--messages-surface-panel-strong) 88%, rgb(255 255 255 / 0.14) 12%);
             box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
             z-index: 6;
         }
@@ -1046,8 +1179,9 @@
             display: grid;
             gap: 10px;
             padding: 14px 18px 18px;
-            border-top: 1px solid rgba(18, 28, 45, 0.08);
-            background: rgba(248, 250, 252, 0.94);
+            border-top: 1px solid color-mix(in srgb, var(--messages-border-soft) 72%, transparent 28%);
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--messages-surface-panel-strong) 82%, transparent 18%) 0%, color-mix(in srgb, var(--messages-surface-panel) 92%, transparent 8%) 100%);
             backdrop-filter: blur(18px);
         }
 
@@ -1106,9 +1240,9 @@
             max-width: 100%;
             padding: 9px 12px;
             border-radius: 999px;
-            border: 1px solid rgba(0, 122, 255, 0.16);
-            background: rgba(255, 255, 255, 0.96);
-            color: #111827;
+            border: 1px solid color-mix(in srgb, rgb(var(--accent-rgb) / 0.24) 72%, transparent 28%);
+            background: color-mix(in srgb, var(--messages-surface-control) 86%, rgb(255 255 255 / 0.12) 14%);
+            color: var(--text-primary);
         }
 
         .messages-pending-attachment-copy {
@@ -1141,7 +1275,7 @@
 
         .messages-pending-attachment-meta {
             font-size: 12px;
-            color: #6b7280;
+            color: var(--text-secondary);
         }
 
         .messages-pending-attachment-remove {
@@ -1153,8 +1287,8 @@
             padding: 0;
             border: 0;
             border-radius: 999px;
-            background: rgba(15, 23, 42, 0.08);
-            color: #475569;
+            background: color-mix(in srgb, var(--messages-surface-control-hover) 78%, transparent 22%);
+            color: var(--text-primary);
         }
 
         .messages-composer-row {
@@ -1172,9 +1306,9 @@
             justify-content: center;
             padding: 0;
             border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.4);
-            background: #ffffff;
-            color: #334155;
+            border: 1px solid color-mix(in srgb, var(--messages-border-soft) 76%, transparent 24%);
+            background: color-mix(in srgb, var(--messages-surface-control) 88%, rgb(255 255 255 / 0.12) 12%);
+            color: var(--text-primary);
             box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
             transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
         }
@@ -1190,8 +1324,9 @@
         .messages-chat-attach:hover:not(:disabled),
         .messages-chat-attach:focus-visible:not(:disabled) {
             transform: translateY(-1px);
-            border-color: rgba(0, 122, 255, 0.42);
-            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.12), 0 14px 28px rgba(15, 23, 42, 0.12);
+            border-color: rgb(var(--accent-rgb) / 0.42);
+            background: color-mix(in srgb, var(--messages-surface-control-hover) 84%, rgb(255 255 255 / 0.08) 16%);
+            box-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 0.12), 0 14px 28px rgba(15, 23, 42, 0.12);
         }
 
         .messages-chat-attach:disabled {
@@ -1205,15 +1340,15 @@
             max-height: 120px;
             padding: 12px 16px;
             border-radius: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.45);
-            background: #ffffff;
-            color: #111827;
+            border: 1px solid color-mix(in srgb, var(--messages-border-soft) 84%, transparent 16%);
+            background: color-mix(in srgb, var(--messages-surface-control) 90%, rgb(255 255 255 / 0.14) 10%);
+            color: var(--text-primary);
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
             resize: none;
         }
 
         #messages-chat-input::placeholder {
-            color: #9ca3af;
+            color: color-mix(in srgb, var(--text-secondary) 82%, rgb(255 255 255 / 0.12) 18%);
         }
 
         .messages-chat-actions {
@@ -1231,7 +1366,7 @@
 
         .messages-chat-status {
             font-size: 13px;
-            color: #6b7280;
+            color: var(--text-secondary);
             min-height: 20px;
         }
 
@@ -1377,6 +1512,18 @@
             html[data-messages-embedded="community"] .messages-chat-actions,
             html[data-messages-embedded="community"] .messages-pending-share {
                 gap: 10px;
+            }
+
+            html[data-messages-embedded="community"] .messages-chat-panel-head-actions {
+                width: 100%;
+                gap: 10px;
+                justify-content: space-between;
+            }
+
+            html[data-messages-embedded="community"] .messages-chat-surface-toggle {
+                flex: 1 1 auto;
+                min-width: 0;
+                justify-content: space-between;
             }
 
             html[data-messages-embedded="community"] .messages-chat-bubble {
@@ -1580,7 +1727,19 @@
                                 <h3 id="messages-chat-panel-title" class="card-title">Choose a user</h3>
                                 <p id="messages-chat-panel-subtitle">Open a user from the left to see the conversation.</p>
                             </div>
-                            <button id="messages-chat-clear" type="button" class="card-btn messages-chat-clear" disabled hidden aria-hidden="true">Clear conversation</button>
+                            <div class="messages-chat-panel-head-actions">
+                                <div class="messages-chat-surface-toggle">
+                                    <div class="messages-chat-surface-toggle-copy">
+                                        <p class="messages-chat-surface-toggle-label">Conversation Style</p>
+                                        <p id="messages-chat-surface-toggle-value" class="messages-chat-surface-toggle-value">Themed</p>
+                                    </div>
+                                    <label class="messages-chat-surface-switch" aria-label="Toggle between original light and themed conversation styles">
+                                        <input id="messages-chat-surface-toggle" type="checkbox" checked>
+                                        <span class="messages-chat-surface-switch-track" aria-hidden="true"></span>
+                                    </label>
+                                </div>
+                                <button id="messages-chat-clear" type="button" class="card-btn messages-chat-clear" disabled hidden aria-hidden="true">Clear conversation</button>
+                            </div>
                         </div>
                         <div id="messages-chat-thread" class="messages-chat-thread">
                             <p class="messages-chat-placeholder">No conversation selected yet.</p>
@@ -1671,6 +1830,9 @@
             const panelSubtitle = document.getElementById('messages-chat-panel-subtitle');
             const thread = document.getElementById('messages-chat-thread');
             const form = document.getElementById('messages-chat-form');
+            const chatShell = document.querySelector('.messages-chat-shell');
+            const surfaceModeToggle = document.getElementById('messages-chat-surface-toggle');
+            const surfaceModeToggleValue = document.getElementById('messages-chat-surface-toggle-value');
             const input = document.getElementById('messages-chat-input');
             const sendButton = document.getElementById('messages-chat-send');
             const attachButton = document.getElementById('messages-chat-attach');
@@ -1701,6 +1863,7 @@
             const MESSAGE_CHARACTER_LIMIT = 160;
             const ISAAC_PREVIEW_USER_ID = 900001;
             const ISAAC_PREVIEW_FALLBACK_REACTION_USER_ID = 900099;
+            const MESSAGE_SURFACE_MODE_STORAGE_KEY = 'messagesChatSurfaceModeByUser';
             const ISAAC_PREVIEW_ALLOWED_EMAILS = new Set([
                 'isaac.haro@fastbridgegroupllc.com',
                 'isaacs.hesed@fastbridgegroup.com',
@@ -1735,6 +1898,51 @@
 
             const currentMessagingUser = getCurrentMessagingUserContext();
             const currentMessagingUserId = currentMessagingUser.id;
+
+            function getMessagingSurfacePreferenceKey() {
+                const email = String(currentMessagingUser.email || '').trim().toLowerCase();
+                const name = String(currentMessagingUser.name || '').trim().toLowerCase().replace(/\s+/g, '-');
+                return email || name || 'default-user';
+            }
+
+            function readMessagesSurfaceModePreference() {
+                try {
+                    const store = JSON.parse(localStorage.getItem(MESSAGE_SURFACE_MODE_STORAGE_KEY) || '{}');
+                    const key = getMessagingSurfacePreferenceKey();
+                    const value = store && typeof store === 'object' ? store[key] : '';
+                    return String(value || '').trim().toLowerCase() === 'light' ? 'light' : 'themed';
+                } catch (error) {
+                    return 'themed';
+                }
+            }
+
+            function persistMessagesSurfaceModePreference(mode) {
+                try {
+                    const store = JSON.parse(localStorage.getItem(MESSAGE_SURFACE_MODE_STORAGE_KEY) || '{}');
+                    const nextStore = store && typeof store === 'object' ? store : {};
+                    nextStore[getMessagingSurfacePreferenceKey()] = mode === 'light' ? 'light' : 'themed';
+                    localStorage.setItem(MESSAGE_SURFACE_MODE_STORAGE_KEY, JSON.stringify(nextStore));
+                } catch (error) {
+                    // Ignore storage failures and keep the current session state only.
+                }
+            }
+
+            function applyMessagesSurfaceMode(mode, options) {
+                const normalizedMode = mode === 'light' ? 'light' : 'themed';
+                if (chatShell) {
+                    chatShell.setAttribute('data-surface-mode', normalizedMode);
+                }
+                if (surfaceModeToggle) {
+                    surfaceModeToggle.checked = normalizedMode === 'themed';
+                    surfaceModeToggle.setAttribute('aria-checked', surfaceModeToggle.checked ? 'true' : 'false');
+                }
+                if (surfaceModeToggleValue) {
+                    surfaceModeToggleValue.textContent = normalizedMode === 'themed' ? 'Themed' : 'Original Light';
+                }
+                if (!options || options.persist !== false) {
+                    persistMessagesSurfaceModePreference(normalizedMode);
+                }
+            }
 
             function canShowIsaacPreviewConversation() {
                 const normalizedName = String(currentMessagingUser.name || '').trim().toLowerCase();
@@ -3202,6 +3410,14 @@
                 });
             }
 
+
+            if (surfaceModeToggle) {
+                surfaceModeToggle.addEventListener('change', () => {
+                    applyMessagesSurfaceMode(surfaceModeToggle.checked ? 'themed' : 'light');
+                });
+            }
+
+            applyMessagesSurfaceMode(readMessagesSurfaceModePreference(), { persist: false });
             if (editingCancel) {
                 editingCancel.addEventListener('click', () => {
                     cancelMessageEdit({ preserveInput: false });

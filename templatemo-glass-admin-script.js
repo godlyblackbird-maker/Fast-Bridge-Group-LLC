@@ -12628,34 +12628,73 @@ function initNavbarDateTime() {
             return copied;
         }
 
+        function setTemporaryButtonLabel(button, nextLabel) {
+            if (!button) {
+                return;
+            }
+
+            const originalLabel = button.dataset.originalLabel || button.textContent;
+            button.dataset.originalLabel = originalLabel;
+            button.textContent = nextLabel;
+            window.setTimeout(() => {
+                if (button.isConnected) {
+                    button.textContent = button.dataset.originalLabel || originalLabel;
+                }
+            }, 1200);
+        }
+
         function createItemMarkup(item, itemType) {
             const wrapper = document.createElement('article');
             wrapper.className = 'outreach-item';
+            wrapper.dataset.published = item.published ? 'true' : 'false';
+            wrapper.dataset.itemType = String(itemType || '').toLowerCase();
 
             const publishLabel = item.published ? 'Published' : 'Draft';
             const publishClass = item.published ? 'published' : 'draft';
 
-            wrapper.innerHTML = `
-                <div class="outreach-item-head">
-                    <span class="outreach-item-title">${item.title}</span>
-                    <span class="outreach-status ${publishClass}">${publishLabel}</span>
-                </div>
-                <p class="outreach-item-body">${item.body}</p>
-                <div class="outreach-item-actions">
-                    <button type="button" class="card-btn outreach-copy-btn">Copy</button>
-                    <button type="button" class="card-btn outreach-publish-btn">${item.published ? 'Unpublish' : 'Publish'}</button>
-                    <button type="button" class="card-btn outreach-delete-btn">Delete</button>
-                </div>
-            `;
+            const head = document.createElement('div');
+            head.className = 'outreach-item-head';
 
-            const copyButton = wrapper.querySelector('.outreach-copy-btn');
-            const publishButton = wrapper.querySelector('.outreach-publish-btn');
-            const deleteButton = wrapper.querySelector('.outreach-delete-btn');
+            const title = document.createElement('span');
+            title.className = 'outreach-item-title';
+            title.textContent = String(item.title || '').trim();
+
+            const status = document.createElement('span');
+            status.className = `outreach-status ${publishClass}`;
+            status.textContent = publishLabel;
+
+            head.append(title, status);
+
+            const body = document.createElement('p');
+            body.className = 'outreach-item-body';
+            body.textContent = String(item.body || '').trim();
+
+            const actions = document.createElement('div');
+            actions.className = 'outreach-item-actions';
+
+            const copyButton = document.createElement('button');
+            copyButton.type = 'button';
+            copyButton.className = 'card-btn outreach-copy-btn';
+            copyButton.textContent = 'Copy';
+
+            const publishButton = document.createElement('button');
+            publishButton.type = 'button';
+            publishButton.className = 'card-btn outreach-publish-btn';
+            publishButton.textContent = item.published ? 'Unpublish' : 'Publish';
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'card-btn outreach-delete-btn';
+            deleteButton.textContent = 'Delete';
+
+            actions.append(copyButton, publishButton, deleteButton);
+            wrapper.append(head, body, actions);
 
             if (copyButton) {
                 copyButton.addEventListener('click', async () => {
                     const copied = await copyText(item.body);
                     if (copied) {
+                        setTemporaryButtonLabel(copyButton, 'Copied');
                         showDashboardToast('success', 'Copied', `${itemType} copied for sharing.`);
                     } else {
                         showDashboardToast('error', 'Copy Failed', 'Unable to copy text in this browser.');

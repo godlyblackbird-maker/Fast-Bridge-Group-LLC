@@ -308,6 +308,8 @@
             position: relative;
             flex: 1 1 auto;
             min-width: 0;
+            min-height: 22px;
+            padding: 5px 0;
             overflow-x: auto;
             overflow-y: hidden;
             scrollbar-width: auto;
@@ -335,10 +337,27 @@
             content: '';
             position: absolute;
             inset: 50% 0 auto;
-            height: 1px;
+            height: 10px;
             transform: translateY(-50%);
-            background: linear-gradient(90deg, transparent, rgb(var(--accent-light-rgb) / 0.34), transparent);
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.04));
             pointer-events: none;
+        }
+
+        .buyers-sheet-scroll-rail-thumb {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 10px;
+            min-width: 44px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0.86), rgb(var(--accent-light-rgb) / 0.96));
+            box-shadow:
+                0 8px 18px -12px rgb(var(--accent-rgb) / 0.88),
+                inset 0 1px 0 rgb(255 255 255 / 0.28);
+            transform: translate3d(0, -50%, 0);
+            pointer-events: none;
+            z-index: 1;
         }
 
         .buyers-sheet-scroll-rail-spacer {
@@ -1528,6 +1547,7 @@
                         </span>
                         <div id="mls-imports-top-scroll-track" class="buyers-sheet-scroll-rail-track" role="scrollbar" aria-controls="mls-imports-sheet-table" aria-label="Top horizontal spreadsheet scroll">
                             <div id="mls-imports-top-scroll-spacer" class="buyers-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                            <div id="mls-imports-top-scroll-thumb" class="buyers-sheet-scroll-rail-thumb" aria-hidden="true"></div>
                         </div>
                     </div>
                     <div id="mls-imports-table-wrap" class="buyers-sheet-table-wrap">
@@ -1557,6 +1577,7 @@
                         </span>
                         <div id="mls-imports-bottom-scroll-track" class="buyers-sheet-scroll-rail-track" role="scrollbar" aria-controls="mls-imports-sheet-table" aria-label="Bottom horizontal spreadsheet scroll">
                             <div id="mls-imports-bottom-scroll-spacer" class="buyers-sheet-scroll-rail-spacer" aria-hidden="true"></div>
+                            <div id="mls-imports-bottom-scroll-thumb" class="buyers-sheet-scroll-rail-thumb" aria-hidden="true"></div>
                         </div>
                     </div>
                     <div class="buyers-sheet-pagination">
@@ -1922,8 +1943,10 @@
             const tableElement = document.getElementById('mls-imports-sheet-table');
             const topScrollTrack = document.getElementById('mls-imports-top-scroll-track');
             const topScrollSpacer = document.getElementById('mls-imports-top-scroll-spacer');
+            const topScrollThumb = document.getElementById('mls-imports-top-scroll-thumb');
             const bottomScrollTrack = document.getElementById('mls-imports-bottom-scroll-track');
             const bottomScrollSpacer = document.getElementById('mls-imports-bottom-scroll-spacer');
+            const bottomScrollThumb = document.getElementById('mls-imports-bottom-scroll-thumb');
             const countBadge = document.getElementById('mls-imports-count');
             const addRowButton = document.getElementById('mls-imports-add-row');
             const addPdfButton = document.getElementById('mls-imports-add-pdf');
@@ -1964,7 +1987,7 @@
             const templateResetButton = document.getElementById('mls-imports-template-reset');
             const templateCloseButtons = templateModal ? Array.from(templateModal.querySelectorAll('[data-template-close="true"]')) : [];
 
-            if (!tableBody || !tableWrap || !tableElement || !topScrollTrack || !topScrollSpacer || !bottomScrollTrack || !bottomScrollSpacer || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendAllTwilioButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton || !prevPageButton || !nextPageButton || !pageIndicator || !pageMeta) {
+            if (!tableBody || !tableWrap || !tableElement || !topScrollTrack || !topScrollSpacer || !topScrollThumb || !bottomScrollTrack || !bottomScrollSpacer || !bottomScrollThumb || !countBadge || !addRowButton || !addPdfButton || !pdfInput || !exportCsvButton || !sendAllTwilioButton || !sendEmailButton || !addToMyAgentsButton || !clearAllButton || !prevPageButton || !nextPageButton || !pageIndicator || !pageMeta) {
                 return;
             }
 
@@ -1989,6 +2012,24 @@
             function initSpreadsheetScrollRails() {
                 let syncingSource = '';
 
+                const syncRailThumb = (trackElement, thumbElement) => {
+                    if (!trackElement || !thumbElement) {
+                        return;
+                    }
+
+                    const maxScrollLeft = Math.max(trackElement.scrollWidth - trackElement.clientWidth, 0);
+                    const visibleRatio = maxScrollLeft > 0 ? (trackElement.clientWidth / trackElement.scrollWidth) : 1;
+                    const thumbWidth = Math.max(Math.round(trackElement.clientWidth * visibleRatio), 44);
+                    const maxThumbOffset = Math.max(trackElement.clientWidth - thumbWidth, 0);
+                    const thumbOffset = maxScrollLeft > 0
+                        ? Math.round((trackElement.scrollLeft / maxScrollLeft) * maxThumbOffset)
+                        : 0;
+
+                    thumbElement.style.width = `${Math.min(thumbWidth, trackElement.clientWidth)}px`;
+                    thumbElement.style.transform = `translate3d(${thumbOffset}px, -50%, 0)`;
+                    thumbElement.hidden = maxScrollLeft <= 0;
+                };
+
                 const syncRailMetrics = () => {
                     const scrollWidth = Math.max(tableElement.scrollWidth, tableWrap.scrollWidth, tableWrap.clientWidth);
                     const spacerWidth = `${scrollWidth}px`;
@@ -2007,6 +2048,9 @@
                     if (bottomScrollTrack.parentElement) {
                         bottomScrollTrack.parentElement.hidden = !hasOverflow;
                     }
+
+                    syncRailThumb(topScrollTrack, topScrollThumb);
+                    syncRailThumb(bottomScrollTrack, bottomScrollThumb);
                 };
 
                 const syncFrom = (source) => {
@@ -2026,6 +2070,9 @@
                         tableWrap.scrollLeft = bottomScrollTrack.scrollLeft;
                         topScrollTrack.scrollLeft = bottomScrollTrack.scrollLeft;
                     }
+
+                    syncRailThumb(topScrollTrack, topScrollThumb);
+                    syncRailThumb(bottomScrollTrack, bottomScrollThumb);
 
                     if (typeof window.requestAnimationFrame === 'function') {
                         window.requestAnimationFrame(() => {

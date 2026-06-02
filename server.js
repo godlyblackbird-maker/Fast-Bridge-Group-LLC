@@ -443,6 +443,9 @@ const SQLITE_BACKUP_S3_PREFIX = String(process.env.SQLITE_BACKUP_S3_PREFIX || 'd
 const TWILIO_SCHEDULE_POLL_MS = Math.max(5 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_POLL_MS || 5 * 1000), 10) || (5 * 1000));
 const TWILIO_SCHEDULE_MIN_LEAD_MS = Math.max(60 * 1000, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MIN_LEAD_MS || 60 * 1000), 10) || (60 * 1000));
 const TWILIO_SCHEDULE_MAX_BATCH = Math.max(1, Number.parseInt(String(process.env.TWILIO_SCHEDULE_MAX_BATCH || 20), 10) || 20);
+const COMMUNITY_TEXT_SCHEDULE_POLL_MS = Math.max(5 * 1000, Number.parseInt(String(process.env.COMMUNITY_TEXT_SCHEDULE_POLL_MS || 5 * 1000), 10) || (5 * 1000));
+const COMMUNITY_TEXT_SCHEDULE_MIN_LEAD_MS = Math.max(60 * 1000, Number.parseInt(String(process.env.COMMUNITY_TEXT_SCHEDULE_MIN_LEAD_MS || 60 * 1000), 10) || (60 * 1000));
+const COMMUNITY_TEXT_SCHEDULE_MAX_BATCH = Math.max(1, Number.parseInt(String(process.env.COMMUNITY_TEXT_SCHEDULE_MAX_BATCH || 20), 10) || 20);
 const ACTIVE_BUYERS_SHEET_ROW_ID = 1;
 const EMPLOYEE_TRACKER_SHEET_ROW_ID = 1;
 const MLS_IMPORT_PDF_BODY_LIMIT = '260mb';
@@ -478,6 +481,8 @@ let sqliteBackupTimer = null;
 let sqliteBackupInFlight = null;
 let twilioScheduledMessageTimer = null;
 let twilioScheduledMessageRunPromise = null;
+let communityTextScheduledMessageTimer = null;
+let communityTextScheduledMessageRunPromise = null;
 let trestleAccessTokenCache = {
   token: '',
   expiresAt: 0,
@@ -1060,6 +1065,81 @@ function serializeCommunityTextMessage(row) {
   };
 }
 
+function normalizeCommunityScheduledFor(value) {
+  const normalized = normalizeApiTimestamp(value);
+  if (!normalized) {
+    return '';
+  }
+
+  const scheduledTime = Date.parse(normalized);
+  if (Number.isNaN(scheduledTime)) {
+    return '';
+  }
+
+  return new Date(scheduledTime).toISOString();
+}
+
+function serializeCommunityScheduledTextMessage(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: Number(row.id) || 0,
+    channelName: sanitizeCommunityTextChannelName(row.channel_name || row.channelName),
+    userId: Number(row.owner_user_id || row.ownerUserId) || 0,
+    userName: String(row.owner_name || row.ownerName || 'FAST User').trim() || 'FAST User',
+    userEmail: String(row.owner_email || row.ownerEmail || '').trim().toLowerCase(),
+    userRole: String(row.owner_role || row.ownerRole || 'user').trim().toLowerCase() || 'user',
+    message: String(row.message || '').trim(),
+    scheduledFor: normalizeCommunityScheduledFor(row.scheduled_for || row.scheduledFor) || '',
+    status: String(row.status || 'queued').trim().toLowerCase() || 'queued',
+    errorMessage: String(row.error_message || row.errorMessage || '').trim(),
+    createdAt: normalizeApiTimestamp(row.created_at || row.createdAt) || '',
+    updatedAt: normalizeApiTimestamp(row.updated_at || row.updatedAt) || '',
+    sentAt: normalizeApiTimestamp(row.sent_at || row.sentAt) || '',
+    liveMessageId: Number(row.live_message_id || row.liveMessageId) || 0
+  };
+}
+
+async function insertCommunityTextMessageRecord({ channelName, userId, userName, userEmail, userRole, message, createdAt = null }) {
+  const normalizedChannel = sanitizeCommunityTextChannelName(channelName);
+  const normalizedMessage = normalizeCommunityTextMessage(message);
+  const normalizedUserId = Number(userId) || 0;
+  const normalizedUserName = String(userName || userEmail || 'FAST User').trim() || 'FAST User';
+  const normalizedUserEmail = String(userEmail || '').trim().toLowerCase();
+  const normalizedUserRole = String(userRole || 'user').trim().toLowerCase() || 'user';
+  const normalizedCreatedAt = normalizeApiTimestamp(createdAt) || new Date().toISOString();
+
+  if (!normalizedUserId) {
+    throw new Error('Unable to resolve the signed-in user for community chat.');
+  }
+
+  if (!normalizedMessage) {
+    throw new Error('A message is required before posting to global chat.');
+  }
+
+  const result = await dbRun(
+    `INSERT INTO community_channel_messages (
+       channel_name,
+       user_id,
+       user_name,
+       user_email,
+       user_role,
+       message,
+       created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [normalizedChannel, normalizedUserId, normalizedUserName, normalizedUserEmail, normalizedUserRole, normalizedMessage, normalizedCreatedAt]
+  );
+
+  return dbGet(
+    `SELECT id, channel_name, user_id, user_name, user_email, user_role, message, created_at, edited_at
+       FROM community_channel_messages
+      WHERE id = ?`,
+    [result.lastID]
+  ).then(serializeCommunityTextMessage);
+}
+
 async function getCommunityTextMessageById(messageId) {
   const normalizedMessageId = Number(messageId) || 0;
   if (!normalizedMessageId) {
@@ -1094,41 +1174,14 @@ async function listCommunityTextMessages(channelName, limit = 150) {
 }
 
 async function createCommunityTextMessage(channelName, userLike, messageText) {
-  const normalizedChannel = sanitizeCommunityTextChannelName(channelName);
-  const normalizedMessage = normalizeCommunityTextMessage(messageText);
-  const userId = Number(userLike?.id) || 0;
-  const userName = String(userLike?.name || userLike?.email || 'FAST User').trim() || 'FAST User';
-  const userEmail = String(userLike?.email || '').trim().toLowerCase();
-  const userRole = String(userLike?.role || 'user').trim().toLowerCase() || 'user';
-  const createdAt = new Date().toISOString();
-
-  if (!userId) {
-    throw new Error('Unable to resolve the signed-in user for community chat.');
-  }
-
-  if (!normalizedMessage) {
-    throw new Error('A message is required before posting to global chat.');
-  }
-
-  const result = await dbRun(
-    `INSERT INTO community_channel_messages (
-       channel_name,
-       user_id,
-       user_name,
-       user_email,
-       user_role,
-       message,
-       created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [normalizedChannel, userId, userName, userEmail, userRole, normalizedMessage, createdAt]
-  );
-
-  return dbGet(
-    `SELECT id, channel_name, user_id, user_name, user_email, user_role, message, created_at, edited_at
-       FROM community_channel_messages
-      WHERE id = ?`,
-    [result.lastID]
-  ).then(serializeCommunityTextMessage);
+  return insertCommunityTextMessageRecord({
+    channelName,
+    userId: Number(userLike?.id) || 0,
+    userName: String(userLike?.name || userLike?.email || 'FAST User').trim() || 'FAST User',
+    userEmail: String(userLike?.email || '').trim().toLowerCase(),
+    userRole: String(userLike?.role || 'user').trim().toLowerCase() || 'user',
+    message: messageText
+  });
 }
 
 async function updateCommunityTextMessage(messageId, userLike, messageText) {
@@ -1171,6 +1224,216 @@ async function deleteCommunityTextMessage(messageId, userLike) {
   return { id: Number(existingMessage.id) || 0 };
 }
 
+async function getCommunityScheduledTextMessageById(scheduleId) {
+  const normalizedScheduleId = Number(scheduleId) || 0;
+  if (!normalizedScheduleId) {
+    return null;
+  }
+
+  return dbGet('SELECT * FROM community_scheduled_messages WHERE id = ?', [normalizedScheduleId]);
+}
+
+async function listCommunityScheduledTextMessagesForUser(channelName, userLike, limit = 25) {
+  const normalizedChannel = sanitizeCommunityTextChannelName(channelName);
+  const normalizedUserId = Number(userLike?.id) || 0;
+  const normalizedUserEmail = String(userLike?.email || '').trim().toLowerCase();
+  const normalizedLimit = Math.max(1, Math.min(Number(limit) || 25, 100));
+  if (!normalizedUserId && !normalizedUserEmail) {
+    return [];
+  }
+
+  const rows = await dbAll(
+    `SELECT *
+       FROM community_scheduled_messages
+      WHERE channel_name = ?
+        AND status = 'queued'
+        AND (owner_user_id = ? OR owner_email = ?)
+      ORDER BY datetime(scheduled_for) ASC, id ASC
+      LIMIT ?`,
+    [normalizedChannel, normalizedUserId, normalizedUserEmail, normalizedLimit]
+  );
+
+  return rows.map(serializeCommunityScheduledTextMessage).filter(Boolean);
+}
+
+async function createCommunityScheduledTextMessage(channelName, userLike, messageText, scheduledFor) {
+  const normalizedChannel = sanitizeCommunityTextChannelName(channelName);
+  const normalizedMessage = normalizeCommunityTextMessage(messageText);
+  const normalizedScheduledFor = normalizeCommunityScheduledFor(scheduledFor);
+  const userId = Number(userLike?.id) || 0;
+  const userName = String(userLike?.name || userLike?.email || 'FAST User').trim() || 'FAST User';
+  const userEmail = String(userLike?.email || '').trim().toLowerCase();
+  const userRole = String(userLike?.role || 'user').trim().toLowerCase() || 'user';
+
+  if (!userId) {
+    throw new Error('Sign in again before scheduling a community chat message.');
+  }
+
+  if (!normalizedMessage) {
+    throw new Error('A message is required before scheduling global chat.');
+  }
+
+  if (!normalizedScheduledFor) {
+    throw new Error('Choose a valid date and time for the scheduled message.');
+  }
+
+  const scheduledTime = Date.parse(normalizedScheduledFor);
+  if (Number.isNaN(scheduledTime)) {
+    throw new Error('Choose a valid date and time for the scheduled message.');
+  }
+
+  if ((scheduledTime - Date.now()) < COMMUNITY_TEXT_SCHEDULE_MIN_LEAD_MS) {
+    throw new Error(`Scheduled community messages must be at least ${Math.round(COMMUNITY_TEXT_SCHEDULE_MIN_LEAD_MS / 60000)} minute(s) in the future.`);
+  }
+
+  const result = await dbRun(
+    `INSERT INTO community_scheduled_messages (
+       channel_name,
+       owner_user_id,
+       owner_name,
+       owner_email,
+       owner_role,
+       message,
+       scheduled_for,
+       status,
+       created_at,
+       updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+    [normalizedChannel, userId, userName, userEmail, userRole, normalizedMessage, normalizedScheduledFor]
+  );
+
+  return getCommunityScheduledTextMessageById(result.lastID).then(serializeCommunityScheduledTextMessage);
+}
+
+async function getQueuedCommunityScheduledTextMessages(nowIso, limit = COMMUNITY_TEXT_SCHEDULE_MAX_BATCH) {
+  return dbAll(
+    `SELECT *
+       FROM community_scheduled_messages
+      WHERE status = 'queued'
+        AND datetime(scheduled_for) <= datetime(?)
+      ORDER BY datetime(scheduled_for) ASC, id ASC
+      LIMIT ?`,
+    [nowIso, Math.max(1, Number(limit) || COMMUNITY_TEXT_SCHEDULE_MAX_BATCH)]
+  );
+}
+
+async function markCommunityScheduledTextMessageProcessing(scheduleId) {
+  const result = await dbRun(
+    `UPDATE community_scheduled_messages
+        SET status = 'processing',
+            updated_at = CURRENT_TIMESTAMP,
+            error_message = NULL
+      WHERE id = ?
+        AND status = 'queued'`,
+    [Number(scheduleId) || 0]
+  );
+
+  return Number(result?.changes) > 0;
+}
+
+async function markCommunityScheduledTextMessageSent(scheduleId, liveMessageId) {
+  await dbRun(
+    `UPDATE community_scheduled_messages
+        SET status = 'sent',
+            live_message_id = ?,
+            error_message = NULL,
+            sent_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+    [Number(liveMessageId) || null, Number(scheduleId) || 0]
+  );
+}
+
+async function markCommunityScheduledTextMessageFailed(scheduleId, error) {
+  await dbRun(
+    `UPDATE community_scheduled_messages
+        SET status = 'failed',
+            error_message = ?,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+    [String(error && error.message ? error.message : error || 'Scheduled community message failed.').trim(), Number(scheduleId) || 0]
+  );
+}
+
+async function cancelCommunityScheduledTextMessage(scheduleId) {
+  const result = await dbRun(
+    `UPDATE community_scheduled_messages
+        SET status = 'cancelled',
+            error_message = NULL,
+            updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+        AND status = 'queued'`,
+    [Number(scheduleId) || 0]
+  );
+
+  return Number(result?.changes) > 0;
+}
+
+async function processDueCommunityScheduledTextMessages() {
+  if (communityTextScheduledMessageRunPromise) {
+    return communityTextScheduledMessageRunPromise;
+  }
+
+  communityTextScheduledMessageRunPromise = (async () => {
+    while (true) {
+      const queuedRows = await getQueuedCommunityScheduledTextMessages(new Date().toISOString(), COMMUNITY_TEXT_SCHEDULE_MAX_BATCH);
+      if (!Array.isArray(queuedRows) || queuedRows.length === 0) {
+        break;
+      }
+
+      for (const row of queuedRows) {
+        const claimed = await markCommunityScheduledTextMessageProcessing(row.id);
+        if (!claimed) {
+          continue;
+        }
+
+        try {
+          const liveMessage = await insertCommunityTextMessageRecord({
+            channelName: row.channel_name,
+            userId: Number(row.owner_user_id) || 0,
+            userName: String(row.owner_name || '').trim(),
+            userEmail: String(row.owner_email || '').trim().toLowerCase(),
+            userRole: String(row.owner_role || 'user').trim().toLowerCase() || 'user',
+            message: row.message
+          });
+          await markCommunityScheduledTextMessageSent(row.id, liveMessage && liveMessage.id);
+        } catch (error) {
+          await markCommunityScheduledTextMessageFailed(row.id, error);
+          console.error('Failed to process scheduled community chat message:', row && row.id, error);
+        }
+      }
+    }
+  })()
+    .catch((error) => {
+      console.error('Scheduled community chat processing crashed:', error);
+    })
+    .finally(() => {
+      communityTextScheduledMessageRunPromise = null;
+    });
+
+  return communityTextScheduledMessageRunPromise;
+}
+
+function initializeCommunityScheduledTextMessageWorker() {
+  if (communityTextScheduledMessageTimer) {
+    return;
+  }
+
+  processDueCommunityScheduledTextMessages().catch((error) => {
+    console.error('Scheduled community chat startup scan crashed:', error);
+  });
+
+  communityTextScheduledMessageTimer = setInterval(() => {
+    processDueCommunityScheduledTextMessages().catch((error) => {
+      console.error('Scheduled community chat interval scan crashed:', error);
+    });
+  }, COMMUNITY_TEXT_SCHEDULE_POLL_MS);
+
+  if (communityTextScheduledMessageTimer && typeof communityTextScheduledMessageTimer.unref === 'function') {
+    communityTextScheduledMessageTimer.unref();
+  }
+}
+
 function getCommunityVoiceRoom(roomName, createIfMissing = false) {
   const normalizedRoom = sanitizeCommunityVoiceRoomName(roomName);
   let roomState = communityVoiceRooms.get(normalizedRoom) || null;
@@ -1192,6 +1455,7 @@ function serializeCommunityVoiceParticipant(participant) {
     clientId: participant.clientId,
     name: participant.name,
     role: participant.role,
+    avatarImage: String(participant.avatarImage || '').trim(),
     joinedAt: participant.joinedAt,
     lastSeenAt: participant.lastSeenAt
   };
@@ -6531,7 +6795,8 @@ app.get('/api/community/messages', async (req, res) => {
     const channelName = sanitizeCommunityTextChannelName(req.query?.channel);
     const limit = Math.max(1, Math.min(Number.parseInt(String(req.query?.limit || '150'), 10) || 150, 250));
     const messages = await listCommunityTextMessages(channelName, limit);
-    return res.json({ success: true, channelName, messages });
+    const scheduledMessages = await listCommunityScheduledTextMessagesForUser(channelName, decoded, 25);
+    return res.json({ success: true, channelName, messages, scheduledMessages });
   } catch (error) {
     console.error('Community message load error:', error);
     return res.status(500).json({ error: 'Unable to load community chat messages.' });
@@ -6546,11 +6811,22 @@ app.post('/api/community/messages', async (req, res) => {
 
   try {
     const channelName = sanitizeCommunityTextChannelName(req.body?.channel);
+    const scheduledFor = String(req.body?.scheduledFor || '').trim();
+    if (scheduledFor) {
+      const scheduledMessage = await createCommunityScheduledTextMessage(channelName, decoded, req.body?.message, scheduledFor);
+      return res.status(201).json({
+        success: true,
+        scheduled: true,
+        scheduledMessage,
+        message: `Scheduled your message for ${scheduledMessage.scheduledFor}.`
+      });
+    }
+
     const message = await createCommunityTextMessage(channelName, decoded, req.body?.message);
     return res.status(201).json({ success: true, message });
   } catch (error) {
     const errorMessage = String(error?.message || '').trim();
-    const isValidationError = /required|resolve the signed-in user/i.test(errorMessage);
+    const isValidationError = /required|resolve the signed-in user|choose a valid date|scheduled community messages must be at least|sign in again before scheduling/i.test(errorMessage);
     if (!isValidationError) {
       console.error('Community message send error:', error);
     }
@@ -6602,6 +6878,47 @@ app.delete('/api/community/messages/:messageId', async (req, res) => {
   }
 });
 
+app.delete('/api/community/scheduled-messages/:scheduleId', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const scheduleId = Number(req.params?.scheduleId) || 0;
+  if (!scheduleId) {
+    return res.status(400).json({ error: 'A valid scheduled message id is required.' });
+  }
+
+  try {
+    const row = await getCommunityScheduledTextMessageById(scheduleId);
+    if (!row) {
+      return res.status(404).json({ error: 'Scheduled message not found.' });
+    }
+
+    const isOwner = Number(row.owner_user_id) === Number(decoded.id)
+      || (String(row.owner_email || '').trim().toLowerCase() && String(row.owner_email || '').trim().toLowerCase() === String(decoded.email || '').trim().toLowerCase());
+    const isAdmin = String(decoded.role || '').trim().toLowerCase() === 'admin';
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ error: 'You can only delete your own scheduled messages.' });
+    }
+
+    if (String(row.status || '').trim().toLowerCase() !== 'queued') {
+      return res.status(409).json({ error: 'Only queued scheduled messages can be deleted.' });
+    }
+
+    const cancelled = await cancelCommunityScheduledTextMessage(scheduleId);
+    if (!cancelled) {
+      return res.status(409).json({ error: 'This scheduled message is no longer queued.' });
+    }
+
+    const scheduledMessage = serializeCommunityScheduledTextMessage(await getCommunityScheduledTextMessageById(scheduleId));
+    return res.json({ success: true, scheduledMessage });
+  } catch (error) {
+    console.error('Community scheduled message delete error:', error);
+    return res.status(500).json({ error: 'Unable to delete the scheduled community message.' });
+  }
+});
+
 app.post('/api/community/voice/join', async (req, res) => {
   const decoded = requireAuth(req, res);
   if (!decoded) {
@@ -6621,6 +6938,7 @@ app.post('/api/community/voice/join', async (req, res) => {
 
   const displayName = String(decoded.name || decoded.email || 'FAST User').trim() || 'FAST User';
   const role = String(decoded.role || '').trim() || 'user';
+  const avatarImage = String(decoded.avatarImage || '').trim();
   const now = Date.now();
   const roomState = pruneCommunityVoiceRoom(roomName, getCommunityVoiceRoom(roomName, true)) || getCommunityVoiceRoom(roomName, true);
 
@@ -6632,6 +6950,7 @@ app.post('/api/community/voice/join', async (req, res) => {
       userId,
       name: displayName,
       role,
+      avatarImage,
       joinedAt: now,
       lastSeenAt: now
     };
@@ -6639,6 +6958,7 @@ app.post('/api/community/voice/join', async (req, res) => {
   } else {
     participant.name = displayName;
     participant.role = role;
+    participant.avatarImage = avatarImage;
     participant.lastSeenAt = now;
   }
 
@@ -6688,6 +7008,32 @@ app.get('/api/community/voice/events', async (req, res) => {
         createdAt: signal.createdAt
       })),
     signalCursor: Math.max(after, Number(roomState.nextSignalId || 1) - 1)
+  });
+});
+
+app.get('/api/community/voice/presence', async (req, res) => {
+  const decoded = requireAuth(req, res);
+  if (!decoded) {
+    return;
+  }
+
+  const rooms = [];
+  for (const [roomName, roomState] of communityVoiceRooms.entries()) {
+    const activeRoom = pruneCommunityVoiceRoom(roomName, roomState);
+    if (!activeRoom) {
+      continue;
+    }
+
+    rooms.push({
+      room: activeRoom.room,
+      activeParticipants: activeRoom.participants.length,
+      participants: activeRoom.participants.map(serializeCommunityVoiceParticipant)
+    });
+  }
+
+  return res.json({
+    success: true,
+    rooms
   });
 });
 
@@ -7762,6 +8108,64 @@ function initializeDatabase() {
       `, (indexErr) => {
         if (indexErr) {
           console.error('Error creating community_channel_messages index:', indexErr);
+        }
+      });
+    }
+  });
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS community_scheduled_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel_name TEXT NOT NULL,
+      owner_user_id INTEGER NOT NULL,
+      owner_name TEXT NOT NULL,
+      owner_email TEXT,
+      owner_role TEXT NOT NULL DEFAULT 'user',
+      message TEXT NOT NULL,
+      scheduled_for DATETIME NOT NULL,
+      status TEXT NOT NULL DEFAULT 'queued',
+      error_message TEXT,
+      live_message_id INTEGER,
+      sent_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(owner_user_id) REFERENCES users(id),
+      FOREIGN KEY(live_message_id) REFERENCES community_channel_messages(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating community_scheduled_messages table:', err);
+    } else {
+      console.log('Community scheduled messages table ready');
+      db.run('ALTER TABLE community_scheduled_messages ADD COLUMN error_message TEXT', (alterErr) => {
+        if (alterErr && !/duplicate column name/i.test(String(alterErr.message || ''))) {
+          console.error('Error ensuring community_scheduled_messages.error_message column:', alterErr);
+        }
+      });
+      db.run('ALTER TABLE community_scheduled_messages ADD COLUMN live_message_id INTEGER', (alterErr) => {
+        if (alterErr && !/duplicate column name/i.test(String(alterErr.message || ''))) {
+          console.error('Error ensuring community_scheduled_messages.live_message_id column:', alterErr);
+        }
+      });
+      db.run('ALTER TABLE community_scheduled_messages ADD COLUMN sent_at DATETIME', (alterErr) => {
+        if (alterErr && !/duplicate column name/i.test(String(alterErr.message || ''))) {
+          console.error('Error ensuring community_scheduled_messages.sent_at column:', alterErr);
+        }
+      });
+      db.run(`
+        CREATE INDEX IF NOT EXISTS idx_community_scheduled_messages_status_time
+        ON community_scheduled_messages(status, scheduled_for)
+      `, (indexErr) => {
+        if (indexErr) {
+          console.error('Error creating community_scheduled_messages status index:', indexErr);
+        }
+      });
+      db.run(`
+        CREATE INDEX IF NOT EXISTS idx_community_scheduled_messages_owner_channel
+        ON community_scheduled_messages(owner_user_id, channel_name, scheduled_for)
+      `, (indexErr) => {
+        if (indexErr) {
+          console.error('Error creating community_scheduled_messages owner index:', indexErr);
         }
       });
     }
@@ -27543,6 +27947,7 @@ async function startServer() {
 
     initializeS3BackupsAndHealthChecks();
     initializeTwilioScheduledMessageWorker();
+    initializeCommunityScheduledTextMessageWorker();
   });
 }
 

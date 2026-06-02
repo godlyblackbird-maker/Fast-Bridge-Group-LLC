@@ -737,6 +737,263 @@
             gap: 12px;
         }
 
+        .outreach-studio-card {
+            position: relative;
+            overflow: hidden;
+            padding: 24px;
+            border-color: color-mix(in srgb, var(--glass-border) 78%, rgba(var(--accent-rgb), 0.16) 22%);
+            background:
+                radial-gradient(circle at 88% 10%, rgba(var(--accent-rgb), 0.16), transparent 24%),
+                radial-gradient(circle at 10% 92%, rgba(var(--accent-light-rgb), 0.14), transparent 28%),
+                linear-gradient(150deg, color-mix(in srgb, var(--glass-bg) 96%, rgba(255, 255, 255, 0.08) 4%), color-mix(in srgb, var(--glass-bg) 86%, rgba(15, 23, 42, 0.12) 14%));
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.12),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+                0 24px 64px rgba(2, 8, 23, 0.22);
+        }
+
+        .outreach-studio-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 24%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 24%, rgba(255, 255, 255, 0.02));
+        }
+
+        .outreach-studio-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .outreach-studio-card .card-header {
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .outreach-studio-card .card-title {
+            letter-spacing: -0.03em;
+        }
+
+        .outreach-studio-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 0.92fr) minmax(320px, 1.08fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .outreach-studio-compose,
+        .outreach-studio-library {
+            display: grid;
+            gap: 16px;
+            min-width: 0;
+            padding: 18px;
+            border-radius: 26px;
+            border: 1px solid color-mix(in srgb, var(--glass-border) 80%, rgba(255, 255, 255, 0.08) 20%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .outreach-studio-library {
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.16), transparent 34%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+        }
+
+        .outreach-owner {
+            width: fit-content;
+            max-width: 100%;
+            margin: 0;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, rgba(var(--accent-rgb), 0.28) 60%, var(--glass-border) 40%);
+            background: rgba(var(--accent-rgb), 0.12);
+            color: var(--text-primary);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .outreach-studio-card .outreach-input-grid {
+            gap: 14px;
+        }
+
+        .outreach-studio-card .outreach-input-grid .form-group {
+            padding: 16px;
+            border-radius: 22px;
+            border: 1px solid color-mix(in srgb, var(--glass-border) 80%, rgba(255, 255, 255, 0.06) 20%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .outreach-studio-card .outreach-input-grid label {
+            display: inline-flex;
+            margin-bottom: 10px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(226, 232, 240, 0.82);
+        }
+
+        .outreach-studio-card .form-input {
+            border-radius: 16px;
+            border-color: color-mix(in srgb, var(--glass-border) 80%, rgba(255, 255, 255, 0.06) 20%);
+            background: color-mix(in srgb, var(--glass-bg) 84%, rgba(255, 255, 255, 0.16) 16%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        .outreach-studio-card .form-input:focus {
+            border-color: rgba(var(--accent-rgb), 0.34);
+            box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.14), 0 14px 28px rgba(15, 23, 42, 0.12);
+        }
+
+        .outreach-studio-card textarea.outreach-textarea {
+            min-height: 220px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .outreach-studio-card .outreach-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 2px;
+        }
+
+        .outreach-studio-card .outreach-actions .card-btn {
+            min-width: 170px;
+            min-height: 48px;
+            border-radius: 16px;
+            box-shadow: 0 14px 30px rgba(var(--accent-rgb), 0.22);
+        }
+
+        .outreach-studio-list {
+            display: grid;
+            gap: 14px;
+            align-content: start;
+            min-height: 100%;
+        }
+
+        .outreach-empty {
+            margin: 0;
+            padding: 26px 20px;
+            border-radius: 22px;
+            border: 1px dashed color-mix(in srgb, var(--glass-border) 76%, rgba(var(--accent-rgb), 0.16) 24%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.65;
+        }
+
+        .outreach-item {
+            display: grid;
+            gap: 14px;
+            padding: 18px;
+            border-radius: 24px;
+            border: 1px solid color-mix(in srgb, var(--glass-border) 78%, rgba(255, 255, 255, 0.06) 22%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 36px rgba(15, 23, 42, 0.12);
+        }
+
+        .outreach-item[data-published="true"] {
+            border-color: rgba(16, 185, 129, 0.28);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 36px rgba(16, 185, 129, 0.12);
+        }
+
+        .outreach-item-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .outreach-item-title {
+            display: block;
+            font-size: 16px;
+            line-height: 1.3;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .outreach-status {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 30px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border: 1px solid transparent;
+            flex: 0 0 auto;
+        }
+
+        .outreach-status.published {
+            color: #d1fae5;
+            border-color: rgba(16, 185, 129, 0.28);
+            background: rgba(16, 185, 129, 0.16);
+        }
+
+        .outreach-status.draft {
+            color: #fef3c7;
+            border-color: rgba(245, 158, 11, 0.26);
+            background: rgba(245, 158, 11, 0.14);
+        }
+
+        .outreach-item-body {
+            margin: 0;
+            max-height: 240px;
+            overflow: auto;
+            padding: 16px;
+            border-radius: 18px;
+            border: 1px solid color-mix(in srgb, var(--glass-border) 78%, rgba(255, 255, 255, 0.06) 22%);
+            background: color-mix(in srgb, var(--glass-bg) 80%, rgba(255, 255, 255, 0.14) 20%);
+            color: var(--text-primary);
+            white-space: pre-wrap;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .outreach-studio-card[data-outreach-type="scripts"] .outreach-item-body {
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+        }
+
+        .outreach-item-actions {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .outreach-item-actions .card-btn {
+            min-height: 44px;
+            border-radius: 14px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 24px rgba(15, 23, 42, 0.12);
+        }
+
+        .outreach-copy-btn {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+        }
+
+        .outreach-publish-btn {
+            background: linear-gradient(135deg, rgba(var(--accent-light-rgb), 0.86), rgba(var(--accent-rgb), 0.86));
+            color: #ffffff;
+        }
+
+        .outreach-delete-btn {
+            border-color: rgba(248, 113, 113, 0.28);
+            background: linear-gradient(180deg, rgba(127, 29, 29, 0.18), rgba(127, 29, 29, 0.08));
+            color: #fecaca;
+        }
+
         @media (max-width: 1180px) {
             .twilio-quick-send-grid {
                 grid-template-columns: 1fr;
@@ -750,6 +1007,10 @@
                 width: 140px;
                 height: 140px;
                 justify-self: start;
+            }
+
+            .outreach-studio-shell {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -774,6 +1035,28 @@
 
             .twilio-quick-send-primary-actions {
                 width: 100%;
+            }
+
+            .outreach-studio-card {
+                padding: 18px;
+            }
+
+            .outreach-studio-compose,
+            .outreach-studio-library {
+                padding: 16px;
+            }
+
+            .outreach-studio-card .outreach-actions {
+                justify-content: stretch;
+            }
+
+            .outreach-studio-card .outreach-actions .card-btn {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .outreach-item-actions {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -1063,6 +1346,53 @@
             grid-column: 1 / -1;
             padding: 0;
             overflow: hidden;
+            --campaign-replies-text-primary: var(--text-primary);
+            --campaign-replies-text-secondary: var(--text-secondary);
+            --campaign-replies-surface-shell: color-mix(in srgb, var(--glass-bg) 88%, rgba(var(--accent-light-rgb), 0.14) 12%);
+            --campaign-replies-surface-panel: color-mix(in srgb, var(--glass-bg) 92%, rgba(var(--accent-light-rgb), 0.08) 8%);
+            --campaign-replies-surface-panel-strong: color-mix(in srgb, var(--glass-bg) 84%, rgba(var(--accent-rgb), 0.12) 16%);
+            --campaign-replies-surface-control: color-mix(in srgb, var(--glass-bg) 86%, rgba(255, 255, 255, 0.16) 14%);
+            --campaign-replies-border: color-mix(in srgb, var(--glass-border) 78%, rgba(var(--accent-rgb), 0.18) 22%);
+            --campaign-replies-shadow: 0 18px 32px var(--glass-shadow);
+            --campaign-reply-badge-bg: color-mix(in srgb, rgba(var(--accent-rgb), 0.2) 62%, var(--campaign-replies-surface-control) 38%);
+            --campaign-reply-badge-border: color-mix(in srgb, rgba(var(--accent-rgb), 0.34) 58%, var(--campaign-replies-border) 42%);
+            --campaign-reply-badge-color: var(--campaign-replies-text-primary);
+        }
+
+        .campaign-replies-card[data-surface-mode="light"] {
+            --campaign-replies-text-primary: #0f172a;
+            --campaign-replies-text-secondary: #475569;
+            --campaign-replies-surface-shell: rgba(245, 247, 250, 0.98);
+            --campaign-replies-surface-panel: rgba(255, 255, 255, 0.96);
+            --campaign-replies-surface-panel-strong: rgba(255, 255, 255, 0.98);
+            --campaign-replies-surface-control: rgba(255, 255, 255, 0.94);
+            --campaign-replies-border: rgba(148, 163, 184, 0.22);
+            --campaign-replies-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+            --campaign-reply-badge-bg: rgba(var(--accent-rgb), 0.12);
+            --campaign-reply-badge-border: rgba(var(--accent-rgb), 0.18);
+            --campaign-reply-badge-color: #0f172a;
+        }
+
+        [data-theme="dark"] .campaign-replies-card,
+        [data-theme="space"] .campaign-replies-card,
+        [data-theme="cyberpunk"] .campaign-replies-card,
+        [data-theme="christmas"] .campaign-replies-card,
+        [data-theme="holloween"] .campaign-replies-card,
+        [data-theme="blacklight"] .campaign-replies-card {
+            --campaign-reply-badge-bg: rgba(255, 255, 255, 0.14);
+            --campaign-reply-badge-border: rgba(255, 255, 255, 0.22);
+            --campaign-reply-badge-color: #ffffff;
+        }
+
+        [data-theme="light"] .campaign-replies-card,
+        [data-theme="beach"] .campaign-replies-card,
+        [data-theme="cloud"] .campaign-replies-card,
+        [data-theme="swamp"] .campaign-replies-card,
+        [data-theme="sunset"] .campaign-replies-card,
+        [data-theme="japan"] .campaign-replies-card {
+            --campaign-reply-badge-bg: color-mix(in srgb, rgba(var(--accent-rgb), 0.16) 54%, rgba(255, 255, 255, 0.9) 46%);
+            --campaign-reply-badge-border: color-mix(in srgb, rgba(var(--accent-rgb), 0.28) 62%, rgba(15, 23, 42, 0.08) 38%);
+            --campaign-reply-badge-color: var(--campaign-replies-text-primary);
         }
 
         .campaign-replies-head {
@@ -1075,7 +1405,7 @@
 
         .campaign-replies-head-copy p {
             margin: 8px 0 0;
-            color: var(--text-secondary);
+            color: var(--campaign-replies-text-secondary);
             line-height: 1.6;
         }
 
@@ -1084,8 +1414,10 @@
             grid-template-columns: 320px minmax(0, 1fr);
             height: clamp(760px, 84vh, 1040px);
             margin-top: 18px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(180deg, rgba(245, 247, 250, 0.98) 0%, rgba(232, 236, 242, 0.98) 100%);
+            border-top: 1px solid var(--campaign-replies-border);
+            background:
+                radial-gradient(circle at top right, rgba(var(--accent-light-rgb), 0.14), transparent 32%),
+                linear-gradient(180deg, var(--campaign-replies-surface-shell) 0%, var(--campaign-replies-surface-panel) 100%);
         }
 
         .campaign-replies-list,
@@ -1097,28 +1429,130 @@
         .campaign-replies-list {
             display: grid;
             grid-template-rows: auto minmax(0, 1fr);
-            border-right: 1px solid rgba(15, 23, 42, 0.08);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 246, 250, 0.98) 100%);
+            border-right: 1px solid var(--campaign-replies-border);
+            background: linear-gradient(180deg, var(--campaign-replies-surface-panel-strong) 0%, var(--campaign-replies-surface-panel) 100%);
             contain: layout paint;
         }
 
         .campaign-replies-list-head,
         .campaign-replies-thread-head {
             padding: 18px 20px;
-            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-            background: rgba(255, 255, 255, 0.88);
+            border-bottom: 1px solid var(--campaign-replies-border);
+            background: color-mix(in srgb, var(--campaign-replies-surface-panel-strong) 90%, rgba(255, 255, 255, 0.08) 10%);
             backdrop-filter: blur(18px);
         }
 
+        .campaign-replies-thread-head-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .campaign-reply-surface-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--campaign-replies-border);
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 92%, rgba(255, 255, 255, 0.08) 8%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .campaign-reply-surface-toggle-copy {
+            display: grid;
+            gap: 1px;
+        }
+
+        .campaign-reply-surface-toggle-label,
+        .campaign-reply-surface-toggle-value {
+            margin: 0;
+            line-height: 1.15;
+        }
+
+        .campaign-reply-surface-toggle-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--campaign-replies-text-secondary);
+        }
+
+        .campaign-reply-surface-toggle-value {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--campaign-replies-text-primary);
+            white-space: nowrap;
+        }
+
+        .campaign-reply-surface-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            width: 56px;
+            height: 30px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .campaign-reply-surface-switch input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .campaign-reply-surface-switch-track {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.92), rgba(var(--accent-light-rgb), 0.92));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 10px 20px -14px rgba(var(--accent-rgb), 0.74);
+            transition: background 0.22s ease, box-shadow 0.22s ease;
+        }
+
+        .campaign-reply-surface-switch-track::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            background: #ffffff;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .campaign-reply-surface-switch input:not(:checked) + .campaign-reply-surface-switch-track {
+            background: linear-gradient(135deg, rgba(203, 213, 225, 0.94), rgba(148, 163, 184, 0.96));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 10px 20px -14px rgba(15, 23, 42, 0.34);
+        }
+
+        .campaign-reply-surface-switch input:checked + .campaign-reply-surface-switch-track::after {
+            transform: translateX(26px);
+        }
+
+        .campaign-reply-surface-switch input:focus-visible + .campaign-reply-surface-switch-track {
+            outline: 2px solid rgba(var(--accent-rgb), 0.42);
+            outline-offset: 2px;
+        }
+
         .campaign-replies-list-head {
-            background: rgba(255, 255, 255, 0.98);
+            background: color-mix(in srgb, var(--campaign-replies-surface-panel-strong) 94%, rgba(255, 255, 255, 0.06) 6%);
             backdrop-filter: none;
         }
 
         .campaign-replies-list-head h4,
         .campaign-replies-thread-head h4 {
             margin: 0;
-            color: #111827;
+            color: var(--campaign-replies-text-primary);
             font-size: 18px;
         }
 
@@ -1167,38 +1601,38 @@
         }
 
         .campaign-reply-filters {
-                display: inline-grid;
+            display: inline-grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             align-items: center;
             gap: 4px;
             margin-top: 12px;
             padding: 4px;
-                position: relative;
-                isolation: isolate;
-                overflow: hidden;
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
             border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.94) 100%);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 24px rgba(15, 23, 42, 0.06);
+            border: 1px solid color-mix(in srgb, var(--campaign-replies-border) 86%, rgba(255, 255, 255, 0.1) 14%);
+            background: linear-gradient(180deg, color-mix(in srgb, var(--campaign-replies-surface-control) 96%, rgba(255, 255, 255, 0.08) 4%) 0%, color-mix(in srgb, var(--campaign-replies-surface-panel) 94%, rgba(255, 255, 255, 0.06) 6%) 100%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 24px rgba(15, 23, 42, 0.12);
             width: fit-content;
             max-width: 100%;
         }
 
-            .campaign-reply-filters::before {
-                content: '';
-                position: absolute;
-                top: 4px;
-                left: 4px;
-                width: calc((100% - 8px) / 3);
-                height: calc(100% - 8px);
-                border-radius: 999px;
-                border: 1px solid rgba(var(--accent-rgb), 0.26);
-                background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(var(--accent-rgb), 0.22) 100%);
-                box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-                transform: translateX(0);
-                transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background 0.24s ease;
-                z-index: 0;
-            }
+        .campaign-reply-filters::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc((100% - 8px) / 3);
+            height: calc(100% - 8px);
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, rgba(var(--accent-rgb), 0.34) 62%, var(--campaign-replies-border) 38%);
+            background: linear-gradient(135deg, color-mix(in srgb, var(--campaign-replies-surface-panel-strong) 74%, rgba(var(--accent-rgb), 0.34) 26%) 0%, color-mix(in srgb, var(--campaign-replies-surface-control) 42%, rgba(var(--accent-light-rgb), 0.48) 58%) 100%);
+            box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+            transform: translateX(0);
+            transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background 0.24s ease;
+            z-index: 0;
+        }
 
             .campaign-reply-filters[data-mode="unread"]::before {
                 transform: translateX(calc(100% + 4px));
@@ -1221,32 +1655,32 @@
         }
 
         .campaign-reply-filter-button {
-                position: relative;
-                z-index: 1;
+            position: relative;
+            z-index: 1;
             min-height: 34px;
             padding: 7px 14px;
             border-radius: 999px;
             border: 1px solid transparent;
             background: transparent;
-            color: #64748b;
+            color: var(--campaign-replies-text-secondary);
             font-size: 12px;
             font-weight: 800;
             letter-spacing: 0.06em;
             text-transform: uppercase;
             line-height: 1;
-                transition: color 0.22s ease, opacity 0.22s ease;
+            transition: color 0.22s ease, opacity 0.22s ease;
         }
 
         .campaign-reply-filter-button:hover,
         .campaign-reply-filter-button:focus-visible {
             outline: none;
-            color: #0f172a;
+            color: var(--campaign-replies-text-primary);
         }
 
         .campaign-reply-filter-button.is-active {
-            color: #0f172a;
-                text-shadow: 0 1px 0 rgba(255, 255, 255, 0.48);
-            }
+            color: var(--campaign-replies-text-primary);
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
+        }
 
             .campaign-reply-filters[data-mode="all"] #campaign-reply-filter-unread,
             .campaign-reply-filters[data-mode="all"] #campaign-reply-filter-no-replies,
@@ -1263,16 +1697,16 @@
             min-height: 42px;
             padding: 10px 14px 10px 40px;
             border-radius: 14px;
-            border: 1px solid rgba(148, 163, 184, 0.24);
-            background: rgba(248, 250, 252, 0.96);
-            color: #0f172a;
+            border: 1px solid var(--campaign-replies-border);
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 92%, rgba(255, 255, 255, 0.08) 8%);
+            color: var(--campaign-replies-text-primary);
             font-size: 14px;
             font-weight: 600;
             transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
         }
 
         .campaign-reply-search input::placeholder {
-            color: #64748b;
+            color: var(--campaign-replies-text-secondary);
             font-weight: 500;
         }
 
@@ -1280,7 +1714,7 @@
             outline: none;
             border-color: rgba(var(--accent-rgb), 0.34);
             box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.12);
-            background: #ffffff;
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 86%, rgba(var(--accent-light-rgb), 0.12) 14%);
         }
 
         .campaign-reply-search svg {
@@ -1289,7 +1723,7 @@
             left: 14px;
             width: 16px;
             height: 16px;
-            color: #64748b;
+            color: var(--campaign-replies-text-secondary);
             transform: translateY(-50%);
             pointer-events: none;
             z-index: 1;
@@ -1353,9 +1787,9 @@
             align-items: center;
             justify-content: center;
             border-radius: 999px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            background: rgba(255, 255, 255, 0.94);
-            color: #475569;
+            border: 1px solid var(--campaign-replies-border);
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 90%, rgba(255, 255, 255, 0.08) 10%);
+            color: var(--campaign-replies-text-primary);
         }
 
         .campaign-reply-edit-name:disabled {
@@ -1400,9 +1834,9 @@
             max-width: min(100%, 420px);
             padding: 6px 10px;
             border-radius: 999px;
-            background: rgba(15, 23, 42, 0.06);
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            color: #334155;
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 88%, rgba(255, 255, 255, 0.06) 12%);
+            border: 1px solid var(--campaign-replies-border);
+            color: var(--campaign-replies-text-primary);
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.02em;
@@ -1474,7 +1908,7 @@
         .campaign-replies-list-head p,
         .campaign-replies-thread-head p {
             margin: 6px 0 0;
-            color: #6b7280;
+            color: var(--campaign-replies-text-secondary);
             line-height: 1.5;
         }
 
@@ -1498,9 +1932,9 @@
             align-items: start;
             gap: 8px;
             padding: 14px;
-            border: 1px solid rgba(148, 163, 184, 0.18);
+            border: 1px solid var(--campaign-replies-border);
             border-radius: 18px;
-            background: rgba(255, 255, 255, 0.88);
+            background: color-mix(in srgb, var(--campaign-replies-surface-panel) 88%, rgba(255, 255, 255, 0.08) 12%);
             transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
             transform: translateZ(0);
         }
@@ -1518,7 +1952,7 @@
             padding: 0;
             border: 0;
             background: transparent;
-            color: #0f172a;
+            color: var(--campaign-replies-text-primary);
             text-align: left;
             cursor: pointer;
         }
@@ -1612,7 +2046,7 @@
 
         .campaign-reply-conversation-name {
             font-weight: 700;
-            color: #111827;
+            color: var(--campaign-replies-text-primary);
         }
 
         .campaign-reply-conversation-preview,
@@ -1620,7 +2054,7 @@
         .campaign-reply-empty,
         .campaign-reply-thread-empty,
         .campaign-reply-status {
-            color: #6b7280;
+            color: var(--campaign-replies-text-secondary);
         }
 
         .campaign-reply-conversation-preview {
@@ -1658,9 +2092,9 @@
             gap: 6px;
             padding: 6px 10px;
             border-radius: 999px;
-            background: rgba(var(--accent-rgb), 0.12);
-            border: 1px solid rgba(var(--accent-rgb), 0.18);
-            color: #0f172a;
+            background: var(--campaign-reply-badge-bg);
+            border: 1px solid var(--campaign-reply-badge-border);
+            color: var(--campaign-reply-badge-color);
             width: fit-content;
         }
 
@@ -1673,7 +2107,9 @@
         .campaign-replies-thread-shell {
             display: grid;
             grid-template-rows: auto minmax(0, 1fr) auto;
-            background: linear-gradient(180deg, rgba(249, 250, 251, 0.96) 0%, rgba(239, 244, 248, 0.98) 100%);
+            background:
+                radial-gradient(circle at top left, rgba(var(--accent-light-rgb), 0.12), transparent 30%),
+                linear-gradient(180deg, var(--campaign-replies-surface-panel) 0%, var(--campaign-replies-surface-shell) 100%);
         }
 
         .campaign-reply-thread {
@@ -1691,10 +2127,10 @@
             gap: 8px;
             padding: 14px 16px;
             border-radius: 22px;
-            background: rgba(255, 255, 255, 0.94);
-            border: 1px solid rgba(148, 163, 184, 0.18);
-            color: #111827;
-            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+            background: color-mix(in srgb, var(--campaign-replies-surface-panel) 90%, rgba(255, 255, 255, 0.1) 10%);
+            border: 1px solid var(--campaign-replies-border);
+            color: var(--campaign-replies-text-primary);
+            box-shadow: var(--campaign-replies-shadow);
             position: relative;
         }
 
@@ -1728,10 +2164,10 @@
             padding: 0;
             aspect-ratio: 1 / 1;
             border-radius: 50%;
-            border: 1px solid rgba(148, 163, 184, 0.26);
-            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid var(--campaign-replies-border);
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 92%, rgba(255, 255, 255, 0.08) 8%);
             box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
-            color: #0f172a;
+            color: var(--campaign-replies-text-primary);
             opacity: 0;
             transform: translateY(4px) scale(0.96);
             pointer-events: none;
@@ -1754,7 +2190,7 @@
             border-radius: 50%;
             appearance: none;
             border: 1px solid rgba(248, 113, 113, 0.28);
-            background: rgba(255, 255, 255, 0.96);
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 92%, rgba(255, 255, 255, 0.08) 8%);
             box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
             color: #b91c1c;
             opacity: 0;
@@ -2029,8 +2465,8 @@
             display: grid;
             gap: 12px;
             padding: 18px 20px 20px;
-            border-top: 1px solid rgba(15, 23, 42, 0.08);
-            background: rgba(255, 255, 255, 0.88);
+            border-top: 1px solid var(--campaign-replies-border);
+            background: color-mix(in srgb, var(--campaign-replies-surface-panel-strong) 88%, rgba(255, 255, 255, 0.06) 12%);
         }
 
         .campaign-reply-form-row {
@@ -2077,9 +2513,9 @@
             overflow-y: hidden;
             resize: none;
             line-height: 1.55;
-            background: rgba(255, 255, 255, 0.94);
-            color: #0f172a;
-            border-color: rgba(148, 163, 184, 0.22);
+            background: color-mix(in srgb, var(--campaign-replies-surface-control) 92%, rgba(255, 255, 255, 0.08) 8%);
+            color: var(--campaign-replies-text-primary);
+            border-color: var(--campaign-replies-border);
         }
 
         #campaign-reply-attach,
@@ -2549,7 +2985,7 @@
 
             body.campaigns-page .campaign-tools-head p,
             body.campaigns-page .campaign-replies-head-copy p {
-                color: var(--text-secondary);
+                color: var(--campaign-replies-text-secondary);
             }
 
             body.campaigns-page .campaign-replies-card {
@@ -2576,13 +3012,13 @@
             body.campaigns-page .campaign-reply-name-group h4,
             body.campaigns-page .campaign-reply-conversation-name,
             body.campaigns-page .campaign-reply-message {
-                color: var(--text-primary);
+                color: var(--campaign-replies-text-primary);
             }
 
             body.campaigns-page .campaign-status-pill {
                 border-color: var(--glass-border);
                 background: rgba(255, 255, 255, 0.08);
-                color: var(--text-primary);
+                color: var(--campaign-replies-text-primary);
             }
 
             body.campaigns-page .campaign-replies-shell {
@@ -2650,25 +3086,25 @@
             }
 
             body.campaigns-page .campaign-reply-filters {
-                border-color: rgba(255, 255, 255, 0.08);
-                background: rgba(255, 255, 255, 0.06);
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 16px 30px rgba(2, 6, 23, 0.22);
+                border-color: color-mix(in srgb, var(--campaign-replies-border) 88%, rgba(255, 255, 255, 0.08) 12%);
+                background: color-mix(in srgb, var(--campaign-replies-surface-control) 90%, rgba(255, 255, 255, 0.08) 10%);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 16px 30px rgba(2, 6, 23, 0.22);
             }
 
             body.campaigns-page .campaign-reply-filters::before {
-                border-color: rgba(96, 165, 250, 0.28);
-                background: linear-gradient(135deg, rgba(59, 130, 246, 0.7), rgba(14, 165, 233, 0.42));
-                box-shadow: 0 10px 18px rgba(59, 130, 246, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+                border-color: color-mix(in srgb, rgba(var(--accent-rgb), 0.38) 64%, var(--campaign-replies-border) 36%);
+                background: linear-gradient(135deg, color-mix(in srgb, rgba(var(--accent-rgb), 0.72) 68%, var(--campaign-replies-surface-panel-strong) 32%), color-mix(in srgb, rgba(var(--accent-light-rgb), 0.46) 72%, var(--campaign-replies-surface-control) 28%));
+                box-shadow: 0 10px 18px rgba(var(--accent-rgb), 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.18);
             }
 
             body.campaigns-page .campaign-reply-filter-button {
-                color: var(--text-secondary);
+                color: var(--campaign-replies-text-secondary);
             }
 
             body.campaigns-page .campaign-reply-filter-button:hover,
             body.campaigns-page .campaign-reply-filter-button:focus-visible,
             body.campaigns-page .campaign-reply-filter-button.is-active {
-                color: var(--text-primary);
+                color: var(--campaign-replies-text-primary);
             }
 
             body.campaigns-page .campaign-replies-list-body {
@@ -2697,9 +3133,9 @@
 
             body.campaigns-page .campaign-reply-badge,
             body.campaigns-page .campaign-reply-status-tag {
-                background: rgba(255, 255, 255, 0.08);
-                border-color: var(--glass-border);
-                color: var(--text-primary);
+                background: var(--campaign-reply-badge-bg);
+                border-color: var(--campaign-reply-badge-border);
+                color: var(--campaign-reply-badge-color);
             }
 
             body.campaigns-page .campaign-reply-badge.is-unread {
@@ -2966,6 +3402,17 @@
 
             .campaign-reply-title-row {
                 gap: 12px;
+            }
+
+            .campaign-replies-thread-head-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .campaign-reply-surface-toggle {
+                flex: 1 1 auto;
+                justify-content: space-between;
+                min-width: 0;
             }
 
             .campaign-reply-name-row {
@@ -3330,6 +3777,7 @@
                                         <div class="campaign-reply-follow-up-row">
                                             <button id="campaign-reply-no-replies-follow-up" type="button" class="card-btn campaign-reply-follow-up-button" hidden>Quick Follow Up</button>
                                             <button id="campaign-reply-no-replies-copy-template" type="button" class="card-btn campaign-reply-follow-up-button" hidden>Copy Template</button>
+                                            <button id="campaign-reply-no-replies-send-template" type="button" class="card-btn campaign-reply-follow-up-button" hidden>Send Copy Template</button>
                                         </div>
                                         <label class="campaign-reply-search" for="campaign-reply-search-input">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -3381,23 +3829,35 @@
                                                     </button>
                                                 </div>
                                             </div>
-                                            <button id="campaign-reply-delete-thread" type="button" class="campaign-reply-delete-thread" aria-label="Delete conversation" title="Delete conversation" disabled>
-                                                <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path d="M3 6h18"></path>
-                                                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
-                                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-                                                    <path d="M10 11v6"></path>
-                                                    <path d="M14 11v6"></path>
-                                                </svg>
-                                            </button>
-                                            <button id="campaign-reply-open-import-property" type="button" class="campaign-reply-open-import-property" aria-label="Open Import Property" title="Open Import Property" disabled>
-                                                <svg viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path d="M12 3v12"></path>
-                                                    <path d="M8.5 11.5L12 15l3.5-3.5"></path>
-                                                    <path d="M4 17.5a2.5 2.5 0 0 0 2.5 2.5h11A2.5 2.5 0 0 0 20 17.5"></path>
-                                                    <path d="M4.5 7.5A2.5 2.5 0 0 1 7 5h10"></path>
-                                                </svg>
-                                            </button>
+                                            <div class="campaign-replies-thread-head-actions">
+                                                <div class="campaign-reply-surface-toggle">
+                                                    <div class="campaign-reply-surface-toggle-copy">
+                                                        <p class="campaign-reply-surface-toggle-label">Inbox Style</p>
+                                                        <p id="campaign-reply-surface-toggle-value" class="campaign-reply-surface-toggle-value">Themed</p>
+                                                    </div>
+                                                    <label class="campaign-reply-surface-switch" aria-label="Toggle Twilio Replies Inbox between themed and original light styles">
+                                                        <input id="campaign-reply-surface-toggle" type="checkbox" checked>
+                                                        <span class="campaign-reply-surface-switch-track" aria-hidden="true"></span>
+                                                    </label>
+                                                </div>
+                                                <button id="campaign-reply-delete-thread" type="button" class="campaign-reply-delete-thread" aria-label="Delete conversation" title="Delete conversation" disabled>
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M3 6h18"></path>
+                                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                                                        <path d="M10 11v6"></path>
+                                                        <path d="M14 11v6"></path>
+                                                    </svg>
+                                                </button>
+                                                <button id="campaign-reply-open-import-property" type="button" class="campaign-reply-open-import-property" aria-label="Open Import Property" title="Open Import Property" disabled>
+                                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                                        <path d="M12 3v12"></path>
+                                                        <path d="M8.5 11.5L12 15l3.5-3.5"></path>
+                                                        <path d="M4 17.5a2.5 2.5 0 0 0 2.5 2.5h11A2.5 2.5 0 0 0 20 17.5"></path>
+                                                        <path d="M4.5 7.5A2.5 2.5 0 0 1 7 5h10"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                         <p id="campaign-reply-subtitle">Open a contact on the left to review replies and send a direct response.</p>
                                     </div>
@@ -3454,14 +3914,6 @@
 
                         <div class="glass-card widget-card outreach-card twilio-quick-send-card" data-widget-id="twilio-quick-send" data-widget-title="Twilio Quick Send">
                             <div class="twilio-quick-send-shell">
-                                <div class="twilio-quick-send-hero">
-                                    <div>
-                                        <span class="twilio-quick-send-kicker">SMS Launch Pad</span>
-                                        <h2 class="twilio-quick-send-title">Twilio Quick Send</h2>
-                                        <p class="twilio-quick-send-lead">Launch a small SMS campaign without leaving Campaigns. This workspace is now wider, cleaner, and built to keep your send flow, webhook setup, and live Twilio readiness in one high-signal view.</p>
-                                    </div>
-                                    <div class="twilio-quick-send-glow" aria-hidden="true"></div>
-                                </div>
                                 <div class="twilio-quick-send-grid">
                                     <div class="twilio-quick-send-main">
                                         <div class="campaign-send-panel">
@@ -3516,10 +3968,6 @@
                                         </div>
                                     </div>
                                     <div class="twilio-quick-send-side">
-                                        <div class="twilio-quick-send-side-card">
-                                            <h3>Twilio Readiness</h3>
-                                            <p>Keep inbound routing, number mode, and delivery status visible while you build the send. No more hunting around before launch.</p>
-                                        </div>
                                         <div class="campaign-webhook-panel">
                                             <p id="campaign-webhook-copy" class="campaign-webhook-copy">Replies only show up after Twilio posts inbound messages back to FAST.</p>
                                             <div class="campaign-webhook-meta">
@@ -3544,56 +3992,68 @@
                             </div>
                         </div>
 
-                        <div class="glass-card widget-card outreach-card" data-widget-id="agent-templates" data-widget-title="Agent Templates">
+                        <div class="glass-card widget-card outreach-card outreach-studio-card" data-widget-id="agent-templates" data-widget-title="Agent Templates" data-outreach-type="templates">
                             <div class="card-header">
                                 <div>
                                     <h2 class="card-title">My Agent Templates</h2>
                                     <p class="card-subtitle">Personal templates to send to agents</p>
                                 </div>
                             </div>
-                            <p class="outreach-owner" id="template-owner-label">Workspace owner: You</p>
-                            <div class="outreach-input-grid">
-                                <div class="form-group">
-                                    <label for="template-title-input">Template Title</label>
-                                    <input id="template-title-input" class="form-input" type="text" placeholder="Follow-up template, initial outreach, price reduction...">
+                            <div class="outreach-studio-shell">
+                                <div class="outreach-studio-compose">
+                                    <p class="outreach-owner" id="template-owner-label">Workspace owner: You</p>
+                                    <div class="outreach-input-grid">
+                                        <div class="form-group">
+                                            <label for="template-title-input">Template Title</label>
+                                            <input id="template-title-input" class="form-input" type="text" placeholder="Follow-up template, initial outreach, price reduction...">
+                                        </div>
+                                        <div class="form-group outreach-full-width">
+                                            <label for="template-body-input">Template Message</label>
+                                            <textarea id="template-body-input" class="form-input outreach-textarea" placeholder="Hi [Agent Name], I am reviewing [Property Address] and wanted to confirm..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="outreach-actions">
+                                        <button id="save-template-btn" type="button" class="card-btn active">Save Template</button>
+                                    </div>
                                 </div>
-                                <div class="form-group outreach-full-width">
-                                    <label for="template-body-input">Template Message</label>
-                                    <textarea id="template-body-input" class="form-input outreach-textarea" placeholder="Hi [Agent Name], I am reviewing [Property Address] and wanted to confirm..."></textarea>
-                                </div>
-                            </div>
-                            <div class="outreach-actions">
-                                <button id="save-template-btn" type="button" class="card-btn active">Save Template</button>
-                            </div>
 
-                            <div id="template-list" class="outreach-list">
-                                <p class="outreach-empty">No templates yet.</p>
+                                <div class="outreach-studio-library">
+                                    <div id="template-list" class="outreach-list outreach-studio-list">
+                                        <p class="outreach-empty">No templates yet.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="glass-card widget-card outreach-card" data-widget-id="call-scripts" data-widget-title="Call Scripts">
+                        <div class="glass-card widget-card outreach-card outreach-studio-card" data-widget-id="call-scripts" data-widget-title="Call Scripts" data-outreach-type="scripts">
                             <div class="card-header">
                                 <div>
                                     <h2 class="card-title">Phone Call Scripts</h2>
                                     <p class="card-subtitle">Personal call scripts you can publish</p>
                                 </div>
                             </div>
-                            <p class="outreach-owner" id="script-owner-label">Workspace owner: You</p>
-                            <div class="outreach-input-grid">
-                                <div class="form-group">
-                                    <label for="script-title-input">Script Title</label>
-                                    <input id="script-title-input" class="form-input" type="text" placeholder="Warm lead opener, second call, seller objection handling...">
+                            <div class="outreach-studio-shell">
+                                <div class="outreach-studio-compose">
+                                    <p class="outreach-owner" id="script-owner-label">Workspace owner: You</p>
+                                    <div class="outreach-input-grid">
+                                        <div class="form-group">
+                                            <label for="script-title-input">Script Title</label>
+                                            <input id="script-title-input" class="form-input" type="text" placeholder="Warm lead opener, second call, seller objection handling...">
+                                        </div>
+                                        <div class="form-group outreach-full-width">
+                                            <label for="script-body-input">Call Script</label>
+                                            <textarea id="script-body-input" class="form-input outreach-textarea" placeholder="Hello [Name], this is [Your Name] with FAST BRIDGE GROUP... "></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="outreach-actions">
+                                        <button id="save-script-btn" type="button" class="card-btn active">Save Script</button>
+                                    </div>
                                 </div>
-                                <div class="form-group outreach-full-width">
-                                    <label for="script-body-input">Call Script</label>
-                                    <textarea id="script-body-input" class="form-input outreach-textarea" placeholder="Hello [Name], this is [Your Name] with FAST BRIDGE GROUP... "></textarea>
+                                <div class="outreach-studio-library">
+                                    <div id="script-list" class="outreach-list outreach-studio-list">
+                                        <p class="outreach-empty">No scripts yet.</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="outreach-actions">
-                                <button id="save-script-btn" type="button" class="card-btn active">Save Script</button>
-                            </div>
-                            <div id="script-list" class="outreach-list">
-                                <p class="outreach-empty">No scripts yet.</p>
                             </div>
                         </div>
                     </div>
@@ -3642,7 +4102,7 @@
                     <h3 id="campaign-schedule-title" class="campaign-template-title">Schedule Twilio Campaign</h3>
                     <p class="campaign-template-subtitle">Choose the exact date and time to queue this campaign automatically.</p>
                 </div>
-                <button type="button" class="campaign-template-close" data-campaign-schedule-close="true" aria-label="Close Twilio schedule dialog">Ã—</button>
+                <button type="button" class="campaign-template-close" data-campaign-schedule-close="true" aria-label="Close Twilio schedule dialog">X</button>
             </div>
             <p id="campaign-schedule-subtitle" class="campaign-template-subtitle">Choose the exact date and time to queue this campaign automatically.</p>
             <p class="campaign-schedule-help">The send stays on the server, so it will still run if this page is closed. Scheduled Twilio sends must be at least 1 minute in the future.</p>
@@ -3669,7 +4129,7 @@
                     <h3 id="campaign-no-replies-template-title" class="campaign-template-title">Copy Template</h3>
                     <p class="campaign-template-subtitle">Edit the Twilio no-replies follow-up script and preview it with the active property before copying.</p>
                 </div>
-                <button type="button" class="campaign-template-close" data-campaign-no-replies-template-close="true" aria-label="Close no-replies template manager">Ã—</button>
+                <button type="button" class="campaign-template-close" data-campaign-no-replies-template-close="true" aria-label="Close no-replies template manager">X</button>
             </div>
             <p class="campaign-template-help">Body placeholders: {propertyAddress}, {status}, {agentFirstName}, {agentName}, {senderName}, {timeGreeting}, {dayGreeting}. Aliases also supported here: {firstName}, {fullName}, and {phoneNumber}. Add {timeGreeting} anywhere to place the good-time-of-day line where you want it. Add {dayGreeting} anywhere to place Happy Monday!/Tuesday/etc. based on the current day. If you leave {timeGreeting} out, no time-of-day greeting is added.</p>
             <label class="campaign-template-field">
@@ -3764,12 +4224,16 @@
             const campaignReplyFilterNoRepliesButton = document.getElementById('campaign-reply-filter-no-replies');
             const campaignReplyNoRepliesFollowUpButton = document.getElementById('campaign-reply-no-replies-follow-up');
             const campaignReplyNoRepliesCopyTemplateButton = document.getElementById('campaign-reply-no-replies-copy-template');
+            const campaignReplyNoRepliesSendTemplateButton = document.getElementById('campaign-reply-no-replies-send-template');
             const campaignReplySearchInput = document.getElementById('campaign-reply-search-input');
             const campaignReplyAddThreadButton = document.getElementById('campaign-reply-add-thread');
             const campaignReplyThreadCount = document.getElementById('campaign-reply-thread-count');
+            const campaignRepliesCard = document.querySelector('.campaign-replies-card');
             const campaignReplyTitle = document.getElementById('campaign-reply-title');
             const campaignReplyEditNameButton = document.getElementById('campaign-reply-edit-name');
             const campaignReplyBlockContactButton = document.getElementById('campaign-reply-block-contact');
+            const campaignReplySurfaceToggle = document.getElementById('campaign-reply-surface-toggle');
+            const campaignReplySurfaceToggleValue = document.getElementById('campaign-reply-surface-toggle-value');
             const campaignReplyDeleteThreadButton = document.getElementById('campaign-reply-delete-thread');
             const campaignReplyOpenImportPropertyButton = document.getElementById('campaign-reply-open-import-property');
             const campaignReplyAddressGroup = document.getElementById('campaign-reply-address-group');
@@ -3816,6 +4280,7 @@
             const CAMPAIGN_REPLY_ADDRESS_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyAddressOverrides';
             const CAMPAIGN_REPLY_OFFERS_EMAIL_OVERRIDES_STORAGE_KEY_BASE = 'campaignReplyOffersEmailOverrides';
             const CAMPAIGN_REPLY_SCHEDULED_MESSAGES_STORAGE_KEY_BASE = 'campaignReplyScheduledMessages';
+            const CAMPAIGN_REPLY_SURFACE_MODE_STORAGE_KEY = 'campaignReplySurfaceModeByUser';
             const CAMPAIGN_PLANNER_STORAGE_KEY = 'personalTodoGoalsByUser';
             const CAMPAIGN_TEMPLATE_DEFAULTS = {
                 'first-touch': 'Hi [Agent First Name], this is [Your Name] with FAST BRIDGE GROUP. We are actively buying fixer and off-market homes in [Area] and can close fast. Any stale, pocket, or upcoming listings worth a look? Reply STOP to opt out.',
@@ -3823,6 +4288,61 @@
                 breakup: 'Last note from me for now, [Agent First Name]. If you ever have a seller who needs a quick as-is close in [Area], send it my way and I will respond fast. Happy to share proof of funds and our buy box when useful. Reply STOP to opt out.'
             };
             const CAMPAIGN_NO_REPLIES_TEMPLATE_DEFAULT = 'Hi {agentFirstName}, this is {senderName}. Just wanted to follow back up on {propertyAddress} and see if you are still open to talking through it. {timeGreeting}';
+
+            function getCampaignSurfacePreferenceKey() {
+                const parseStoredObject = (key) => {
+                    try {
+                        return JSON.parse(localStorage.getItem(key) || sessionStorage.getItem(key) || '{}');
+                    } catch (error) {
+                        return {};
+                    }
+                };
+
+                const user = parseStoredObject('user');
+                const profile = parseStoredObject('userProfile');
+                const email = String(user.email || profile.email || '').trim().toLowerCase();
+                const name = String(user.name || profile.name || '').trim().toLowerCase().replace(/\s+/g, '-');
+                return email || name || 'default-user';
+            }
+
+            function readCampaignReplySurfaceModePreference() {
+                try {
+                    const store = JSON.parse(localStorage.getItem(CAMPAIGN_REPLY_SURFACE_MODE_STORAGE_KEY) || '{}');
+                    const value = store && typeof store === 'object' ? store[getCampaignSurfacePreferenceKey()] : '';
+                    return String(value || '').trim().toLowerCase() === 'light' ? 'light' : 'themed';
+                } catch (error) {
+                    return 'themed';
+                }
+            }
+
+            function persistCampaignReplySurfaceModePreference(mode) {
+                try {
+                    const store = JSON.parse(localStorage.getItem(CAMPAIGN_REPLY_SURFACE_MODE_STORAGE_KEY) || '{}');
+                    const nextStore = store && typeof store === 'object' ? store : {};
+                    nextStore[getCampaignSurfacePreferenceKey()] = mode === 'light' ? 'light' : 'themed';
+                    localStorage.setItem(CAMPAIGN_REPLY_SURFACE_MODE_STORAGE_KEY, JSON.stringify(nextStore));
+                } catch (error) {
+                    // Ignore storage failures and keep the current page mode only.
+                }
+            }
+
+            function applyCampaignReplySurfaceMode(mode, options = {}) {
+                const normalizedMode = mode === 'light' ? 'light' : 'themed';
+                if (campaignRepliesCard) {
+                    campaignRepliesCard.setAttribute('data-surface-mode', normalizedMode);
+                }
+                if (campaignReplySurfaceToggle) {
+                    campaignReplySurfaceToggle.checked = normalizedMode === 'themed';
+                    campaignReplySurfaceToggle.setAttribute('aria-checked', campaignReplySurfaceToggle.checked ? 'true' : 'false');
+                }
+                if (campaignReplySurfaceToggleValue) {
+                    campaignReplySurfaceToggleValue.textContent = normalizedMode === 'themed' ? 'Themed' : 'Original Light';
+                }
+                if (options.persist !== false) {
+                    persistCampaignReplySurfaceModePreference(normalizedMode);
+                }
+            }
+
             let campaignTemplateSettings = loadCampaignTemplateSettings();
             let campaignNoRepliesTemplateValue = loadCampaignNoRepliesTemplateBody();
             let campaignNoRepliesTemplateDraft = campaignNoRepliesTemplateValue;
@@ -3849,6 +4369,8 @@
                 ownerEmail: ''
             };
             let hasAttemptedAutomaticTwilioInboxRecovery = false;
+
+            applyCampaignReplySurfaceMode(readCampaignReplySurfaceModePreference(), { persist: false });
 
             function escapeCampaignReplyCopyHtml(value) {
                 return String(value || '')
@@ -3949,7 +4471,8 @@
                     campaignReplyFilterUnreadButton,
                     campaignReplyFilterNoRepliesButton,
                     campaignReplyNoRepliesFollowUpButton,
-                    campaignReplyNoRepliesCopyTemplateButton
+                    campaignReplyNoRepliesCopyTemplateButton,
+                    campaignReplyNoRepliesSendTemplateButton
                 ].forEach((element) => {
                     if (element) {
                         element.disabled = !enabled;
@@ -5755,6 +6278,17 @@
                     campaignReplyNoRepliesCopyTemplateButton.hidden = campaignReplyFilterMode !== 'no-replies';
                     campaignReplyNoRepliesCopyTemplateButton.disabled = false;
                 }
+
+                if (campaignReplyNoRepliesSendTemplateButton) {
+                    const noReplyConversations = campaignReplyFilterMode === 'no-replies'
+                        ? getFilteredTwilioInboxConversations().filter((conversation) => !conversation?.hasInboundReplies)
+                        : [];
+                    campaignReplyNoRepliesSendTemplateButton.hidden = campaignReplyFilterMode !== 'no-replies';
+                    campaignReplyNoRepliesSendTemplateButton.disabled = noReplyConversations.length === 0;
+                    campaignReplyNoRepliesSendTemplateButton.textContent = noReplyConversations.length > 0
+                        ? `Send Copy Template (${noReplyConversations.length})`
+                        : 'Send Copy Template';
+                }
             }
 
             async function sendNoRepliesFollowUpMessages() {
@@ -5817,6 +6351,71 @@
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.success) {
                     throw new Error(data.error || 'Unable to send quick follow up.');
+                }
+
+                return data;
+            }
+
+            async function sendNoRepliesCopyTemplateMessages() {
+                const conversations = getFilteredTwilioInboxConversations().filter((conversation) => !conversation?.hasInboundReplies);
+                if (!conversations.length) {
+                    campaignReplyStatus.textContent = 'No no-reply Twilio threads are available for the copy template send.';
+                    return;
+                }
+
+                const confirmation = window.confirm(`Send the copy template to ${conversations.length} no-reply Twilio thread${conversations.length === 1 ? '' : 's'}?`);
+                if (!confirmation) {
+                    return;
+                }
+
+                if (campaignReplyNoRepliesSendTemplateButton) {
+                    campaignReplyNoRepliesSendTemplateButton.disabled = true;
+                }
+                campaignReplyStatus.textContent = `Sending the copy template to ${conversations.length} no-reply thread${conversations.length === 1 ? '' : 's'}...`;
+
+                let sentCount = 0;
+                let failedCount = 0;
+
+                for (const conversation of conversations) {
+                    try {
+                        await sendNoRepliesCopyTemplateMessage(conversation);
+                        sentCount += 1;
+                    } catch (_error) {
+                        failedCount += 1;
+                    }
+                }
+
+                await loadTwilioInboxConversations();
+                if (sentCount > 0 && failedCount === 0) {
+                    campaignReplyStatus.textContent = `Copy template sent to ${sentCount} thread${sentCount === 1 ? '' : 's'}.`;
+                } else if (sentCount > 0) {
+                    campaignReplyStatus.textContent = `Copy template sent to ${sentCount} thread${sentCount === 1 ? '' : 's'}, ${failedCount} failed.`;
+                } else {
+                    campaignReplyStatus.textContent = 'Unable to send the copy template messages.';
+                }
+
+                syncCampaignReplyFilterButtons();
+            }
+
+            async function sendNoRepliesCopyTemplateMessage(conversation) {
+                const conversationKey = String(conversation?.conversationKey || '').trim();
+                const contactPhone = String(conversation?.contactPhone || '').trim();
+                if (!conversationKey || !contactPhone) {
+                    throw new Error('The no-reply Twilio thread is missing a phone number.');
+                }
+
+                const response = await fetch('/api/twilio/inbox/reply', {
+                    method: 'POST',
+                    headers: getCampaignAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        conversationKey,
+                        body: buildNoRepliesCopyTemplateMessage(conversation),
+                        campaignName: conversation.campaignName || campaignNameInput?.value?.trim() || 'Twilio Reply'
+                    })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Unable to send the copy template message.');
                 }
 
                 return data;
@@ -5961,7 +6560,7 @@
                     removeButton.type = 'button';
                     removeButton.className = 'campaign-media-remove';
                     removeButton.setAttribute('aria-label', `Remove ${name.textContent}`);
-                    removeButton.textContent = 'Ã—';
+                    removeButton.textContent = 'X';
                     removeButton.addEventListener('click', () => {
                         onRemove(index);
                     });
@@ -7136,6 +7735,12 @@
                 });
             }
 
+            if (campaignReplyNoRepliesSendTemplateButton) {
+                campaignReplyNoRepliesSendTemplateButton.addEventListener('click', () => {
+                    sendNoRepliesCopyTemplateMessages();
+                });
+            }
+
             async function loadTwilioInboxMessages(conversationKey, options = {}) {
                 if (!conversationKey || !getCampaignAuthToken()) {
                     renderTwilioReplyThread([], null);
@@ -7734,6 +8339,12 @@
                         activeTwilioConversationKey,
                         activeConversation?.contactName || activeConversation?.contactPhone || 'this contact'
                     );
+                });
+            }
+
+            if (campaignReplySurfaceToggle) {
+                campaignReplySurfaceToggle.addEventListener('change', () => {
+                    applyCampaignReplySurfaceMode(campaignReplySurfaceToggle.checked ? 'themed' : 'light');
                 });
             }
 
